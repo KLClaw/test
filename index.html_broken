@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NRIC/FIN Validator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f7f6;
+        }
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h2 { margin-top: 0; color: #333; text-align: center; }
+        p { color: #666; font-size: 0.9rem; text-align: center; }
+        input {
+            width: 100%;
+            padding: 14px;
+            margin: 1rem 0;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 1.3rem;
+            text-transform: uppercase;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #0056b3; }
+        #result {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            display: none;
+            font-weight: bold;
+            text-align: center;
+            line-height: 1.4;
+        }
+        .valid { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .invalid { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>NRIC/FIN Validator</h2>
+    <p>Enter Singapore NRIC or FIN number</p>
+    <input type="text" id="nricInput" placeholder="e.g. S1234567D" maxlength="9" autocomplete="off">
+    <button onclick="validate()">Verify Identity</button>
+    <div id="result"></div>
+</div>
+
+<script>
+/**
+ * Corrected Singapore NRIC/FIN Checksum Algorithm
+ * Uses separate lookup tables for different series to handle the "shift".
+ */
+function validate() {
+    const input = document.getElementById('nricInput').value.toUpperCase().trim();
+    const resultDiv = document.getElementById('currentResult'); // Wait, ID mismatch below
+    // Let's use a cleaner variable approach
+}
+</script>
+
+</body>
+</html>
