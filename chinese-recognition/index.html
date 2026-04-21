@@ -17,7 +17,12 @@
  #status { font-size: 13px; color: #666; margin-bottom: 10px; }
  #result-label { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
  #result { font-size: 80px; margin: 10px 0; color: #007bff; font-weight: bold; min-height: 100px; }
- </style>
+  .debug-section { margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; text-align: left; display: none; width: 100%; }
+  .debug-section.visible { display: block; }
+  #debugCanvas { border: 1px solid #ccc; background: white; margin-top: 5px; image-rendering: pixelated; }
+  .debug-meta { font-family: 'Courier New', Courier, monospace; font-size: 11px; background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px; color: #444; border: 1px solid #e9ecef; }
+  .debug-toggle { font-size: 12px; color: #007bff; cursor: pointer; margin-top: 15px; display: block; }
+  </style>
 </head>
 <body>
 
@@ -33,8 +38,15 @@
  </div>
 
  <div id="result-label">Prediction</div>
- <div id="result">--</div>
-</div>
+  <div id="result">--</div>
+  
+  <span class="debug-toggle" onclick="toggleDebug()">⚙️ Show Debug Info</span>
+  <div id="debugSection" class="debug-section">
+    <div style="font-size: 11px; font-weight: bold; color: #666; margin-bottom: 5px;">Input View (48px height)</div>
+    <canvas id="debugCanvas"></canvas>
+    <div id="debugMeta" class="debug-meta">--</div>
+  </div>
+ </div>
 
 <script>
  let recSession;
@@ -118,21 +130,45 @@
  }
  }
 
- async function runOCR() {
- if (!recSession) return;
- status.innerText = "Thinking...";
+  function toggleDebug() {
+    const sec = document.getElementById('debugSection');
+    sec.classList.toggle('visible');
+    const toggle = document.querySelector('.debug-toggle');
+    toggle.innerText = sec.classList.contains('visible') ? "⚙️ Hide Debug Info" : "⚙️ Show Debug Info";
+  }
 
- // 1. Create an off-screen canvas to resize to model input (48px height)
- const offscreen = document.createElement('canvas');
- const oCtx = offscreen.getContext('2d');
- const ratio = 48 / canvas.height;
- offscreen.height = 48;
- offscreen.width = canvas.width * ratio;
+  async function runOCR() {
+    if (!recSession) return;
+    status.innerText = "Thinking...";
 
- // Fill white background (cruest for OCR)
- oCtx.fillStyle = "white";
- oCtx.fillRect(0, 0, offscreen.width, offscreen.height);
- oCtx.drawImage(canvas, 0, 0, offscreen.width, offscreen.height);
+    // 1. Create an off-screen canvas to resize to model input (48px height)
+    const offscreen = document.createElement('canvas');
+    const oCtx = offscreen.getContext('2d');
+    
+    // PaddleOCR models usually expect 48px height
+    const targetHeight = 48;
+    const ratio = targetHeight / canvas.height;
+    offscreen.height = targetHeight;
+    offscreen.width = canvas.width * ratio;
+
+    // Fill white background (crucial for OCR)
+    oCtx.fillStyle = "white";
+    oCtx.fillRect(0, 0, offscreen.width, offscreen.height);
+    
+    // Add 4px vertical padding (8px total) so character doesn't touch top/bottom
+    // This often improves recognition significantly for hand-drawn characters
+    const pad = 8;
+    const innerH = targetHeight - pad * 2;
+    const innerW = canvas.width * (innerH / canvas.height);
+    const offsetX = (offscreen.width - innerW) / 2;
+    oCtx.drawImage(canvas, offsetX, pad, innerW, innerH);
+
+    // Update Debug UI
+    const debugCanvas = document.getElementById('debugCanvas');
+    debugCanvas.width = offscreen.width;
+    debugCanvas.height = offscreen.height;
+    debugCanvas.getContext('2d').drawImage(offscreen, 0, 0);
+    document.getElementById('debugMeta').innerText = `Input Shape: [1, 3, ${offscreen.height}, ${offscreen.width}]\nDictionary: ${charDict.length} chars`;
 
  const imgData = oCtx.getImageData(0, 0, offscreen.width, offscreen.height);
  const inputTensor = preprocess(imgData);
