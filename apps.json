@@ -10,5 +10,11 @@
     "path": "pdf-merger/index.html",
     "icon": "📄",
     "description": "Merge multiple PDFs into one file"
+  },
+  {
+    "name": "Chinese Character Recognition",
+    "path": "chinese-recognition/index.html",
+    "icon": "✍️",
+    "description": "Handwritten Chinese character OCR using on-device AI"
   }
 ]
