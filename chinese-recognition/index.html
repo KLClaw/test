@@ -103,7 +103,7 @@
  
  // Note: Using the provided logic for session creation
  // We'll try to find the model file in the adjacent folder as requested
- const modelPath = './models/rec_model.onnx'; 
+ const modelPath = './rec.onnx'; 
 
  // Since we are working in a workspace, let's assume the user placed it in models/
  const res = await ort.InferenceSession.create(modelPath, { executionProviders: ['wasm'] });
