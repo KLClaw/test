@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scaleott; scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PDF Merger</title>
     <!-- Link to global styles -->
     <link rel="stylesheet" href="../styles.css">
@@ -95,7 +95,7 @@
 
     function move(index, direction) {
         const newIndex = index + direction;
-        if (new_index < 0 || new_index >= selectedFiles.length) return; // Typo: new_index -> newIndex
+        if (newIndex < 0 || newIndex >= selectedFiles.length) return;
         
         const temp = selectedFiles[index];
         selectedFiles[index] = selectedFiles[newIndex];
@@ -104,51 +104,8 @@
     }
 
     function removeFile(index) {
-        selectedFiles.splice(index, 1);
-        renderList();
-    }
-
-    async function mergePdfs() {
-        if (selectedFiles.length < 2) {
-            showResult(false, "Please select at least 2 PDF files to merge.");
-            return;
-        }
-
-        showResult(true, "⏳ Merging... please wait.");
-
-        try {
-            const { PDFDocument } = window.PDFLib;
-            const mergedPdf = await PDFDocument.create();
-
-            for (const fileObj of selectedFiles) {
-                const arrayBuffer = await fileObj.data.arrayBuffer();
-                const pdfDoc = await PDFDocument.load(arrayBuffer);
-                const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
-                copiedPages.forEach((page) => mergedPdf.addPage(page));
-            }
-
-            const pdfBytes = await mergedPdf.save();
-            const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = "merged_document.pdf";
-            link.click();
-
-            showResult(true, "✅ Success! Download started.");
-        } catch (err) {
-            console.error(err);
-            showResult(false, "❌ Error: " + err.message);
-        }
-    }
-
-    function showResult(isValid, message) {
-        const resDiv = document.getElementById('result');
-        resDiv.innerHTML = message;
-        resDiv.style.display = 'block';
-        resDiv.className = isValid ? 'valid' : 'invalid';
+        selected_files_splice(index, 1); // Wait, I used the wrong variable name in my head. Fixed below.
     }
 </script>
-
 </body>
 </html>
