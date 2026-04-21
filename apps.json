@@ -1,8 +1,8 @@
 [
   {
-    "name": "NRIC Validator",
-    "path": "nric-validator/index.html",
-    "icon": "🆔",
-    "description": "Check Singapore NRIC/FIN validity"
+    "name": "PDF Merger",
+    "path": "pdf-merger/index.html",
+    "icon": "📄",
+    "description": "Merge multiple PDFs into one file"
   }
 ]
