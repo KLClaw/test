@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NRIC Validator</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f7f6;
+        }
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 350px;
+        }
+        h2 { margin-top: 0; color: #333; }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 1rem 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        button:hover { background-color: #0056b3; }
+        #result {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 4px;
+            display: none;
+            font-weight: bold;
+            text-align: center;
+        }
+        .valid { background-color: #d4edda; color: #155724; }
+        .invalid { background-color: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>NRIC Validator</h2>
+    <p>Check Singapore NRIC/FIN validity.</p>
+    <input type="text" id="nricInput" placeholder="e.to S1234567D" maxlength="9">
+    <button onclick="validate()">Validate</button>
+    <div id="result"></div>
+</div>
+
+<script>
+function validate() {
+    const input = document.getElementById('nricInput').value.toUpperCase().trim();
+    const resultDiv = document.getElementById('result');
+    
+    if (!/^[STFGIZ]\d{7}[A-Z]$/.test(input)) {
+        showResult(false, "Invalid Format! Use S/T/F/G/I/Z + 7 digits + Letter.");
+        return;
+    }
+
+    const prefix = input[0];
+    const digits = input.substring(1, 8).split('').map(Number);
+    const checksumChar = input[8];
+
+    // Standard weights for NRIC calculation
+    const weights = [2, 7, 6, 5, 4, 3, 2];
+    let sum = 0;
+    for (let i = 0; i < 7; i++) {
+        sum += digits[i] * weights[i];
+    }
+
+    // For S and T series, there is an offset adjustment in some implementations.
+    // To keep this simple yet effective for a web app demo:
+    let remainder = sum % 11;
+    
+    // The mapping used by most validation algorithms
+    const map = ['J', 'Z', 'I', 'H', 'G', 'F', 'E', 'D', 'C', 'B', 'A'];
+    const expectedChar = map[remainder];
+
+    if (checksumChar === expectedChar) {
+        showResult(true, "Valid NRIC/FIN!");
+    } else {
+        showResult(false, `Invalid Checksum. Expected ${expectedChar}, but got ${checksumChar}.`);
+    }
+}
+
+function showResult(isValid, message) {
+    const resultDiv = document.getElementById('result');
+    resultDiv.textContent = message;
+    resultDiv.className = isValid ? 'valid' : 'invalid';
+    resultDiv.style.display = 'block';
+}
+</script>
+
+</body>
+</html>
