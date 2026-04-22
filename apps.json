@@ -16,5 +16,11 @@
     "path": "chinese-recognition/index.html",
     "icon": "✍️",
     "description": "Handwritten Chinese character OCR using on-device AI"
+  },
+  {
+    "name": "Background Remover",
+    "path": "background-remover/index.html",
+    "icon": "🪄",
+    "description": "Remove backgrounds from images using magic wand tool"
   }
 ]
