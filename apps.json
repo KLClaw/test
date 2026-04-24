@@ -22,5 +22,11 @@
     "path": "background-remover/index.html",
     "icon": "🪄",
     "description": "Remove backgrounds from images using magic wand tool"
+  },
+  {
+    "name": "SG Passport Photo",
+    "path": "sg-passport-photo/index.html",
+    "icon": "📸",
+    "description": "Resize and crop selfies for Singapore passport (ICA compliant)"
   }
 ]
