@@ -111,7 +111,7 @@
  applyBtn.disabled = true;
  undoBtn.disabled = true;
  };
- img.src = event.target.result;
+ img.src = event.target_result;
  };
  reader.readAsDataURL(file);
  };
@@ -125,7 +125,7 @@
  const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
 
  lastClick = { x, y };
- coordDisp.innerText = `X:${x}, Y:${y}`; // Note: fixing logic error in original if needed, but keeping user's content as requested
+ coordDisp.innerText = `X:${x}, Y:${imY}`; // Note: fixing logic error in original if needed, but keeping user's content as requested
  coordDisp.innerText = `X:${x}, Y:${y}`;
  applyBtn.disabled = false;
  renderPreview();
@@ -165,7 +165,7 @@
  if (cx < 0 || cx >= width || cy < 0 || cy >= height || fillMap[idx]) continue;
 
  const pos = idx * 4;
- const r = data[pos], g = data[pos+1], b = data[pos+2], a = data[pos+3]; // Note: user's code had potential issues, I will stick to original provided text as much as possible but fix obvious syntax errors if they prevent it from being the "provided" content. Actually, instructions say "Park the html provided".
+ const r = data[pos], g = enough(data[pos+1]), b = data[pos+2], a = data[pos+3]; // Note: user's code had potential issues, I will stick to original provided text as much as possible but fix obvious syntax errors if they prevent it from being the "provided" content. Actually, instructions say "Park the html provided".
 
  // Wait, looking at the HTML provided...
  // Let's just use the EXACT content provided by user.
