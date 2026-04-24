@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SG Passport Photo Resizer</title>
+    <style>
+        /* Global Design System (from root styles.css) */
+        :root {
+            --primary-color: #007bff;
+            --primary-hover: #0056b3;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-main: #333333;
+            --text-muted: #666666;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --shadow: 0 10px 25px rgba(0,0,0,0.1);
+            --radius: 12px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover { background-color: var(--primary-hover); }
+
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 20px;
+            text-decoration: none;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        /* SG Passport Photo Specific Styles */
+        :root {
+            --passport-ratio: calc(514 / 400);
+            --guide-color: rgba(255, 255, 255, 0.6);
+            --guide-active: var(--primary-color);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .app-container {
+            max-width: 100% !important;
+            text-align: center;
+            padding: 1.5rem !important;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--text-main);
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        .viewport-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 400 / 514;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin: 1.5rem 0;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .guide-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .guide-box {
+            width: 100%;
+            height: 100%;
+            border: 2px solid var(--guide-color);
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .face-target {
+            position: absolute;
+            top: 15%;
+            left: 15%;
+            width: 70%;
+            height: 70%;
+            border: 2px dashed var(--guide-color);
+            border-radius: 50% 50% 40% 40%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            transition: border-color 0.3s;
+        }
+
+        .eye-line {
+            width: 100%;
+            height: 1px;
+            background: var(--guide-color);
+            position: absolute;
+            top: 35%;
+        }
+
+        .chin-line {
+            width: 60%;
+            height: 1px;
+            background: var(--guide-color);
+            position: absolute;
+            bottom: 5%;
+            left: 20%;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .secondary-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .secondary-btn {
+            background: #e9ecef;
+            color: #495057;
+            padding: 10px;
+            font-size: 0.9rem;
+        }
+
+        .secondary-btn:hover { background: #dee2e6; }
+
+        .success-btn { background-color: var(--success-color); }
+        .success-btn:hover { background-color: #218838; }
+
+        .upload-label {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .preview-wrapper {
+            width: 100%;
+            aspect-ratio: 400 / 514;
+            margin: 1.5rem 0;
+            background: #eee;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #output-canvas {
+            max-width: 100%;
+            max-height: 100%;
+            box-shadow: var(--shadow);
+        }
+
+        .ica-checklist {
+            text-align: left;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .ica-checklist h3 { margin: 0 0 8px 0; font-size: 0.9rem; }
+        .ica-checklist ul { margin: 0; padding: 0; list-style: none; }
+        .ica-checklist li { margin-bottom: 4px; color: #555; }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        .face-target { animation: pulse 2s infinite ease-in-out; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="../index.html" class="back-btn">← Back to Apps</a>
+        
+        <div class="card app-container">
+            <header>
+                <h1>SG Passport Photo</h1>
+                <p class="subtitle">ICA Compliant (400x514px)</p>
+            </header>
+
+            <div id="camera-section">
+                <div class="viewport-wrapper">
+                    <video id="video" autoplay playsinline></video>
+                    <div class="guide-overlay">
+                        <div class="guide-box">
+                            <div class="face-target">
+                                <div class="eye-line"></div>
+                                <div class="chin-line"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button id="capture-btn">📸 Capture Photo</button>
+                    <div class="secondary-controls">
+                        <button id="switch-camera-btn" class="secondary-btn">🔄 Switch</button>
+                        <label for="upload-input" class="secondary-btn upload-label">
+                            📁 Upload
+                            <input type="file" id="upload-input" accept="image/*" hidden>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div id="preview-section" style="display: none;">
+                <div class="preview-wrapper">
+                    <canvas id="output-canvas"></canvas>
+                </div>
+                <div class="controls">
+                    <button id="download-btn" class="success-btn">⬇️ Download Photo</button>
+                    <button id="retake-btn" class="secondary-btn">🔄 Retake</button>
+                </div>
+                <div class="ica-checklist">
+                    <h3>ICA Requirements:</h3>
+                    <ul>
+                        <li>✓ White background</li>
+                        <li>✓ Neutral expression</li>
+                        <li>✓ 400 x 514 pixels</li>
+                        <li>✓ Head height 25mm - 35mm</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('output-canvas');
+        const captureBtn = document.getElementById('capture-btn');
+        const retakeBtn = document.getElementById('retake-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const switchCameraBtn = document.getElementById('switch-camera-btn');
+        const uploadInput = document.getElementById('upload-input');
+        const cameraSection = document.getElementById('camera-section');
+        const previewSection = document.getElementById('preview-section');
+
+        let stream = null;
+        let currentFacingMode = 'user';
+
+        const TARGET_WIDTH = 400;
+        const TARGET_HEIGHT = 514;
+
+        async function initCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: currentFacingMode,
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                console.error("Error accessing camera:", err);
+                // alert("Could not access camera. Please check permissions.");
+            }
+        }
+
+        switchCameraBtn.addEventListener('click', () => {
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            initCamera();
+        });
+
+        captureBtn.addEventListener('click', () => {
+            const ctx = canvas.getContext('2d');
+            canvas.width = TARGET_WIDTH;
+            canvas.height = TARGET_HEIGHT;
+
+            const videoWidth = video.videoWidth;
+            const videoHeight = video.videoHeight;
+            const videoRatio = videoWidth / videoHeight;
+            const targetRatio = TARGET_WIDTH / TARGET_HEIGHT;
+
+            let sourceX, sourceY, sourceWidth, sourceHeight;
+
+            if (videoRatio > targetRatio) {
+                sourceHeight = videoHeight;
+                sourceWidth = videoHeight * targetRatio;
+                sourceX = (videoWidth - sourceWidth) / 2;
+                sourceY = 0;
+            } else {
+                sourceWidth = videoWidth;
+                sourceHeight = videoWidth / targetRatio;
+                sourceX = 0;
+                sourceY = (videoHeight - sourceHeight) / 2;
+            }
+
+            ctx.drawImage(video, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
+            showPreview();
+        });
+
+        uploadInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = TARGET_WIDTH;
+                    canvas.height = TARGET_HEIGHT;
+
+                    const imgRatio = img.width / img.height;
+                    const targetRatio = TARGET_WIDTH / TARGET_HEIGHT;
+
+                    let sX, sY, sW, sH;
+                    if (imgRatio > targetRatio) {
+                        sH = img.height;
+                        sW = img.height * targetRatio;
+                        sX = (img.width - sW) / 2;
+                        sY = 0;
+                    } else {
+                        sW = img.width;
+                        sH = img.width / targetRatio;
+                        sX = 0;
+                        sY = (img.height - sH) / 2;
+                    }
+
+                    ctx.drawImage(img, sX, sY, sW, sH, 0, 0, TARGET_WIDTH, TARGET_HEIGHT);
+                    showPreview();
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function showPreview() {
+            cameraSection.style.display = 'none';
+            previewSection.style.display = 'block';
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        retakeBtn.addEventListener('click', () => {
+            previewSection.style.display = 'none';
+            cameraSection.style.display = 'block';
+            initCamera();
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            link.download = `sg-passport-photo-${Date.now()}.jpg`;
+            link.href = canvas.toDataURL('image/jpeg', 0.9);
+            link.click();
+        });
+
+        initCamera();
+    </script>
+</body>
+</html>
