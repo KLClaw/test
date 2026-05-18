@@ -394,28 +394,75 @@
                 renderThumbnailToCanvas(page, canvas);
             }
 
-            // In 'visual' split mode, render visual cut dividers between elements
-            if (currentTab === "visual" && index < pages.length - 1) {
+            // Render visual divider between elements in ALL tabs (acts as an active drop target)
+            if (index < pages.length - 1) {
                 const divider = document.createElement('div');
-                divider.className = `cut-divider ${cutPoints.has(index) ? 'active' : ''}`;
-                divider.innerHTML = `
-                    <button class="cut-btn" title="${cutPoints.has(index) ? 'Remove Cut' : 'Split PDF Here'}">
-                        <i data-lucide="${cutPoints.has(index) ? 'scissors' : 'scissors'}"></i>
-                    </button>
-                `;
+                divider.className = `cut-divider ${currentTab === "visual" ? 'visual-tab' : ''} ${cutPoints.has(index) ? 'active' : ''}`;
                 
-                // Toggle Cut point on click
-                divider.addEventListener('click', () => {
-                    if (cutPoints.has(index)) {
-                        cutPoints.delete(index);
-                        divider.classList.remove('active');
-                        showToast(`Removed cut after page ${index + 1}`, "info");
-                    } else {
-                        cutPoints.add(index);
-                        divider.classList.add('active');
-                        showToast(`Added cut after page ${index + 1}`, "info");
+                // Only render scissor button & handle cuts click in visual split tab
+                if (currentTab === "visual") {
+                    divider.innerHTML = `
+                        <button class="cut-btn" title="${cutPoints.has(index) ? 'Remove Cut' : 'Split PDF Here'}">
+                            <i data-lucide="scissors"></i>
+                        </button>
+                    `;
+                    
+                    // Toggle Cut point on click
+                    divider.addEventListener('click', () => {
+                        if (cutPoints.has(index)) {
+                            cutPoints.delete(index);
+                            divider.classList.remove('active');
+                            showToast(`Removed cut after page ${index + 1}`, "info");
+                        } else {
+                            cutPoints.add(index);
+                            divider.classList.add('active');
+                            showToast(`Added cut after page ${index + 1}`, "info");
+                        }
+                        updateCutsCount();
+                    });
+                }
+
+                // Add drag-and-drop listeners to the gap divider (active in all tabs!)
+                divider.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    divider.classList.add('drag-over');
+                });
+
+                divider.addEventListener('dragleave', () => {
+                    divider.classList.remove('drag-over');
+                });
+
+                divider.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    divider.classList.remove('drag-over');
+                    
+                    if (draggedPageIndex !== null && draggedPageIndex !== index && draggedPageIndex !== index + 1) {
+                        const insertAt = index + 1;
+                        
+                        // Move page in state
+                        const draggedPage = pages.splice(draggedPageIndex, 1)[0];
+                        pages.splice(insertAt > draggedPageIndex ? insertAt - 1 : insertAt, 0, draggedPage);
+                        
+                        // Re-sync visual cuts points map
+                        const updatedCuts = new Set();
+                        cutPoints.forEach(cIndex => {
+                            if (cIndex === draggedPageIndex) {
+                                updatedCuts.add(insertAt > draggedPageIndex ? insertAt - 1 : insertAt);
+                            } else {
+                                let adjusted = cIndex;
+                                if (cIndex >= draggedPageIndex && cIndex < insertAt) adjusted--;
+                                else if (cIndex >= insertAt && cIndex < draggedPageIndex) adjusted++;
+                                updatedCuts.add(adjusted);
+                            }
+                        });
+                        
+                        cutPoints = updatedCuts;
+                        renderWorkspace().then(() => {
+                            lucide.createIcons();
+                            validateAndPreviewRanges();
+                        });
+                        showToast("Moved page to gap", "info");
                     }
-                    updateCutsCount();
                 });
 
                 pagesContainer.appendChild(divider);

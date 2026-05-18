@@ -278,20 +278,32 @@
     height: 85%;
     background: transparent;
     border-left: 2px dashed #cbd5e1;
-    opacity: 0.2;
+    opacity: 0; /* Hidden by default in other tabs to stay clean */
     transition: all 0.2s ease;
 }
 
-.cut-divider:hover::before {
+.cut-divider.visual-tab::before {
+    opacity: 0.2; /* Visible in visual split tab */
+}
+
+.cut-divider.visual-tab:hover::before {
     opacity: 1;
     border-left-color: var(--primary-color);
 }
 
+.cut-divider.drag-over::before {
+    opacity: 1 !important;
+    border-left-color: var(--primary-color) !important;
+    border-left-style: solid !important;
+    width: 4px !important;
+    filter: drop-shadow(0 0 4px rgba(0, 123, 255, 0.4)) !important;
+}
+
 .cut-divider.active::before {
-    opacity: 1;
-    border-left-color: var(--error-color);
-    border-left-style: solid;
-    width: 4px;
+    opacity: 1 !important;
+    border-left-color: var(--error-color) !important;
+    border-left-style: solid !important;
+    width: 4px !important;
     filter: drop-shadow(0 0 3px rgba(220, 53, 69, 0.3));
 }
 
@@ -313,6 +325,10 @@
     color: var(--text-muted);
     padding: 0;
     z-index: 15;
+}
+
+.cut-divider:not(.visual-tab) .cut-btn {
+    display: none !important;
 }
 
 .cut-btn svg {
