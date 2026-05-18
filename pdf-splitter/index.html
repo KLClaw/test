@@ -354,10 +354,10 @@
                     const midX = rect.left + rect.width / 2;
                     let insertAt = targetIndex;
                     
-                    // If dropped on the right half, insert after the target
-                    if (e.clientX >= midX && draggedPageIndex > targetIndex) {
+                    // If dropped on the right half, insert after the target. Otherwise insert before it.
+                    if (e.clientX >= midX) {
                         insertAt = targetIndex + 1;
-                    } else if (e.clientX < midX && draggedPageIndex < targetIndex) {
+                    } else {
                         insertAt = targetIndex;
                     }
                     
@@ -420,6 +420,86 @@
 
                 pagesContainer.appendChild(divider);
             }
+        }
+
+        // Render a dedicated drop target placeholder card at the very end of the grid
+        if (pages.length > 0) {
+            // Render a cut divider before the end placeholder in visual mode too!
+            if (currentTab === "visual") {
+                const lastIdx = pages.length - 1;
+                const divider = document.createElement('div');
+                divider.className = `cut-divider ${cutPoints.has(lastIdx) ? 'active' : ''}`;
+                divider.innerHTML = `
+                    <button class="cut-btn" title="${cutPoints.has(lastIdx) ? 'Remove Cut' : 'Split PDF Here'}">
+                        <i data-lucide="${cutPoints.has(lastIdx) ? 'scissors' : 'scissors'}"></i>
+                    </button>
+                `;
+                divider.addEventListener('click', () => {
+                    if (cutPoints.has(lastIdx)) {
+                        cutPoints.delete(lastIdx);
+                        divider.classList.remove('active');
+                        showToast(`Removed cut after page ${lastIdx + 1}`, "info");
+                    } else {
+                        cutPoints.add(lastIdx);
+                        divider.classList.add('active');
+                        showToast(`Added cut after page ${lastIdx + 1}`, "info");
+                    }
+                    updateCutsCount();
+                });
+                pagesContainer.appendChild(divider);
+            }
+
+            // End drop target card
+            const endCard = document.createElement('div');
+            endCard.className = 'page-card-placeholder';
+            endCard.innerHTML = `
+                <i data-lucide="arrow-down-to-line" style="width:20px;height:20px;"></i>
+                <span style="text-align:center;">Drop to place at end</span>
+            `;
+            
+            endCard.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                endCard.classList.add('drag-over');
+            });
+            
+            endCard.addEventListener('dragleave', () => {
+                endCard.classList.remove('drag-over');
+            });
+            
+            endCard.addEventListener('drop', (e) => {
+                e.preventDefault();
+                endCard.classList.remove('drag-over');
+                
+                if (draggedPageIndex !== null) {
+                    const insertAt = pages.length; // Place at the very end
+                    
+                    if (draggedPageIndex < insertAt - 1) {
+                        const draggedPage = pages.splice(draggedPageIndex, 1)[0];
+                        pages.push(draggedPage);
+                        
+                        // Re-sync visual cut points
+                        const updatedCuts = new Set();
+                        cutPoints.forEach(cIndex => {
+                            if (cIndex === draggedPageIndex) {
+                                updatedCuts.add(pages.length - 1);
+                            } else {
+                                let adjusted = cIndex;
+                                if (cIndex > draggedPageIndex) adjusted--;
+                                updatedCuts.add(adjusted);
+                            }
+                        });
+                        cutPoints = updatedCuts;
+                        
+                        renderWorkspace().then(() => {
+                            lucide.createIcons();
+                            validateAndPreviewRanges();
+                        });
+                        showToast("Moved page to end", "info");
+                    }
+                }
+            });
+            
+            pagesContainer.appendChild(endCard);
         }
 
         updateSelectedCount();
