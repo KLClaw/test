@@ -28,5 +28,11 @@
     "path": "sg-passport-photo/index.html",
     "icon": "📸",
     "description": "Resize and crop selfies for Singapore passport (ICA compliant)"
+  },
+  {
+    "name": "PDF Splitter",
+    "path": "pdf-splitter/index.html",
+    "icon": "✂️",
+    "description": "Rearrange, rotate, delete pages, and split PDFs visually"
   }
 ]

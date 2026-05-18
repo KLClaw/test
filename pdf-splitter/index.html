@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Splitter & Rearranger</title>
+    <!-- Link to custom local stylesheet which extends global styles -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Load pdf-lib from CDN -->
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <!-- Load pdf.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <!-- Load JSZip from CDN for packaging split files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- Load Lucide Icons for clean UI -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body style="padding: 2rem 0; display: block; align-items: flex-start;">
+
+<div class="container">
+    <div class="card-wide">
+        <a href="../index.html" class="back-btn">← Back to Menu</a>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 10px;">
+            <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="scissors" style="color: var(--primary-color);"></i>
+                PDF Splitter & Rearranger
+            </h2>
+            <div id="fileInfoBadge" style="background: #e2e8f0; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; display: none;"></div>
+        </div>
+        <p style="margin-top: 0; margin-bottom: 2rem; color: var(--text-muted);">
+            Upload a PDF document to visually rearrange, rotate, delete pages, and split it into multiple files—100% in your browser.
+        </p>
+
+        <!-- Drop Zone for PDF Upload -->
+        <div id="dropzone" class="dropzone">
+            <input type="file" id="fileInput" accept=".pdf" style="display: none;">
+            <div class="dropzone-icon">
+                <i data-lucide="upload-cloud"></i>
+            </div>
+            <p style="font-size: 1.1rem; font-weight: 600; color: var(--text-main);">
+                Drag & drop your PDF file here or <span class="highlight">Browse</span>
+            </p>
+            <p style="font-size: 0.85rem;">Supports PDF files up to 100MB</p>
+        </div>
+
+        <!-- Main Workspace (Appears after file load) -->
+        <div id="workspace" style="display: none;">
+            
+            <!-- Split Mode Tabs -->
+            <div class="tabs-container">
+                <button class="tab-btn active" onclick="switchTab('visual')" id="tab-visual">
+                    <i data-lucide="scissors" style="width:16px;height:16px;vertical-align:text-bottom;margin-right:4px;"></i> Visual Split
+                </button>
+                <button class="tab-btn" onclick="switchTab('range')" id="tab-range">
+                    <i data-lucide="layers" style="width:16px;height:16px;vertical-align:text-bottom;margin-right:4px;"></i> Page Ranges
+                </button>
+                <button class="tab-btn" onclick="switchTab('extract')" id="tab-extract">
+                    <i data-lucide="check-square" style="width:16px;height:16px;vertical-align:text-bottom;margin-right:4px;"></i> Extract Selected
+                </button>
+                <button class="tab-btn" onclick="switchTab('all')" id="tab-all">
+                    <i data-lucide="copy" style="width:16px;height:16px;vertical-align:text-bottom;margin-right:4px;"></i> Split Every Page
+                </button>
+            </div>
+
+            <!-- Tab 1: Visual Splits Panel Info -->
+            <div id="panel-visual" class="workspace-section active">
+                <div class="action-status-bar">
+                    <div>
+                        <strong>Visual Split Mode:</strong> Click the spaces <span style="color:var(--error-color);font-weight:bold;">between pages</span> to place cut lines. Drag thumbnails to reorder them.
+                    </div>
+                    <div id="visualCutsCount" style="font-weight: bold;">0 Cuts Placed</div>
+                </div>
+            </div>
+
+            <!-- Tab 2: Page Ranges Controls -->
+            <div id="panel-range" class="workspace-section">
+                <div class="controls-card">
+                    <label style="font-weight: bold; font-size: 0.95rem; color: var(--text-main);">Define Page Ranges to Split:</label>
+                    <div class="input-group">
+                        <input type="text" id="rangeInput" placeholder="e.g., 1-2, 3-5, 6" oninput="validateAndPreviewRanges()">
+                        <button id="applyRangeBtn" onclick="exportRangeSplits()">Download Range Splits</button>
+                    </div>
+                    <p class="help-text">Enter comma-separated ranges. E.g., "1-3, 4" will split into two files: pages 1 to 3, and page 4.</p>
+                    
+                    <!-- Live Ranges Preview -->
+                    <div id="rangePreviewContainer" style="margin-top: 1rem; display: none;">
+                        <span style="font-size: 0.8rem; font-weight: bold; color: var(--text-muted); display: block; margin-bottom: 6px;">SPLIT PREVIEW:</span>
+                        <div id="rangePreviewList" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab 3: Extract Selection Panel Info -->
+            <div id="panel-extract" class="workspace-section">
+                <div class="action-status-bar">
+                    <div>
+                        <strong>Extract Selection Mode:</strong> Tick the checkbox in the corner of each thumbnail, then click the download button to pull just those pages into a new PDF.
+                    </div>
+                    <button onclick="exportSelected()" id="extractBtn" style="width: auto; padding: 6px 16px; font-size: 0.85rem;" disabled>Extract Selected (0)</button>
+                </div>
+            </div>
+
+            <!-- Tab 4: Split Every Page Panel Info -->
+            <div id="panel-all" class="workspace-section">
+                <div class="action-status-bar">
+                    <div>
+                        <strong>Split Every Page Mode:</strong> This will export each page of your rearranged PDF as a separate, standalone single-page document.
+                    </div>
+                    <button onclick="exportEveryPage()" style="width: auto; padding: 6px 16px; font-size: 0.85rem; background: var(--success-color);">Split & Download ZIP</button>
+                </div>
+            </div>
+
+            <!-- Page Rearranger Workspace Grid -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h4 style="margin: 0; color: var(--text-main); font-weight: bold;">Workspace: PDF Page Layout</h4>
+                <div style="display: flex; gap: 8px;">
+                    <button onclick="rotateAll(90)" style="padding: 4px 10px; width: auto; font-size: 0.75rem; background: #64748b;" title="Rotate all pages clockwise">🔄 Rotate All Clockwise</button>
+                    <button onclick="resetWorkspace()" style="padding: 4px 10px; width: auto; font-size: 0.75rem; background: #dc3545;" title="Restore original PDF layout">🗑️ Reset Workspace</button>
+                </div>
+            </div>
+            
+            <div id="pagesContainer" class="pages-container">
+                <!-- Dynamic cards with pages and visual cuts -->
+            </div>
+
+            <!-- Visual Split Action Buttons -->
+            <div id="visualActions" style="text-align: right; margin-top: 1rem;">
+                <button id="visualSplitBtn" onclick="exportVisualSplits()" style="width: auto; padding: 12px 24px;">Download Visual Splits</button>
+            </div>
+
+        </div>
+
+        <!-- Dynamic loading container -->
+        <div id="loader" class="loader-container" style="display: none;">
+            <div class="spinner"></div>
+            <p id="loaderText" style="margin: 0; font-weight: bold; color: var(--text-main);">Loading PDF pages...</p>
+        </div>
+
+        <!-- Result message display (error / success output feedback) -->
+        <div id="result" style="margin-top: 1.5rem; padding: 1rem; border-radius: 8px; font-weight: bold; text-align: center;"></div>
+    </div>
+</div>
+
+<!-- High Resolution Page Preview Modal -->
+<div id="previewModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; padding: 2rem;">
+    <div style="background: white; border-radius: 12px; max-width: 600px; width: 100%; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); position: relative;">
+        <!-- Modal Header -->
+        <div style="padding: 1rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <h4 id="previewModalTitle" style="margin: 0; font-weight: bold; color: var(--text-main);">Page Preview</h4>
+            <button onclick="closePreviewModal()" style="width: 32px; height: 32px; padding: 0; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--text-muted); border: none; cursor: pointer;">✕</button>
+        </div>
+        <!-- Modal Content -->
+        <div style="padding: 1.5rem; display: flex; align-items: center; justify-content: center; background: #f8fafc; min-height: 350px; position: relative;">
+            <div id="modalSpinner" class="spinner" style="position: absolute;"></div>
+            <canvas id="modalCanvas" style="max-width: 100%; max-height: 50vh; display: none; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #e2e8f0;"></canvas>
+        </div>
+        <!-- Modal Footer -->
+        <div style="padding: 1rem; border-top: 1px solid #e2e8f0; background: #f8fafc; text-align: center; font-size: 0.8rem; color: var(--text-muted);">
+            Full-size preview loaded client-side
+        </div>
+    </div>
+</div>
+
+<!-- Dynamic toast popup alert -->
+<div id="toast" class="toast">
+    <span id="toastIcon"></span>
+    <span id="toastMessage"></span>
+</div>
+
+<script>
+    // Initialize PDF.js worker source
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+    // Core States
+    let originalPdfBytes = null; // Stored ArrayBuffer
+    let originalFileName = "";
+    let pdfjsDoc = null;         // PDF.js parsed document references
+    let pages = [];              // Draggable pages state: { id, originalIndex, rotation, checked, cachedThumb }
+    let cutPoints = new Set();   // Cut index locations (cut after page index)
+    let currentTab = "visual";   // Default mode
+    let draggedPageIndex = null; // Track dragging index
+
+    // DOM selectors
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const workspace = document.getElementById('workspace');
+    const loader = document.getElementById('loader');
+    const loaderText = document.getElementById('loaderText');
+    const pagesContainer = document.getElementById('pagesContainer');
+    const resultDiv = document.getElementById('result');
+    const rangeInput = document.getElementById('rangeInput');
+
+    // Drag & Drop File Upload events
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+    });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) handleSelectedFile(file);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) handleSelectedFile(file);
+    });
+
+    // Main file processor
+    async function handleSelectedFile(file) {
+        if (file.type !== 'application/pdf') {
+            showToast("Please upload a valid PDF file.", "error");
+            return;
+        }
+        
+        hideResult();
+        originalFileName = file.name.replace(".pdf", "");
+        showLoader("Loading and parsing PDF...");
+
+        try {
+            originalPdfBytes = await file.arrayBuffer();
+            
+            // Parse with PDF.js, slicing a copy so the Web Worker doesn't detach/neuter the main buffer
+            const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(originalPdfBytes.slice(0)) });
+            pdfjsDoc = await loadingTask.promise;
+
+            showToast(`Loaded "${file.name}" successfully!`, "success");
+            document.getElementById('fileInfoBadge').innerHTML = `📄 ${pdfjsDoc.numPages} Pages`;
+            document.getElementById('fileInfoBadge').style.display = 'block';
+
+            // Populate initial pages state
+            pages = [];
+            for (let i = 0; i < pdfjsDoc.numPages; i++) {
+                pages.push({
+                    id: 'page-' + Math.random().toString(36).substr(2, 9),
+                    originalIndex: i,
+                    rotation: 0,
+                    checked: false,
+                    cachedThumb: null
+                });
+            }
+
+            cutPoints.clear();
+            rangeInput.value = "";
+            document.getElementById('rangePreviewContainer').style.display = 'none';
+
+            // Complete loading & render workspace
+            hideLoader();
+            dropzone.style.display = "none";
+            workspace.style.display = "block";
+            
+            await renderWorkspace();
+            lucide.createIcons();
+            
+        } catch (err) {
+            console.error(err);
+            hideLoader();
+            showResult(false, "Error parsing PDF: " + err.message);
+            showToast("Failed to load PDF.", "error");
+        }
+    }
+
+    // Dynamic state renderer for page grid
+    async function renderWorkspace() {
+        pagesContainer.innerHTML = '';
+        
+        if (pages.length === 0) {
+            pagesContainer.innerHTML = '<div style="width:100%; text-align:center; padding: 2rem; color: var(--text-muted);">No pages remaining. Reset workspace to restore.</div>';
+            updateSelectedCount();
+            return;
+        }
+
+        // Render each page with a cut divider in between
+        for (let index = 0; index < pages.length; index++) {
+            const page = pages[index];
+            
+            // Create Page Card DOM
+            const pageCard = document.createElement('div');
+            pageCard.className = 'page-card';
+            pageCard.setAttribute('draggable', 'true');
+            pageCard.setAttribute('data-index', index);
+            
+            // Setup page card inner HTML elements
+            pageCard.innerHTML = `
+                <div class="page-badge">Page ${page.originalIndex + 1}</div>
+                <div class="page-checkbox-container">
+                    <input type="checkbox" class="page-checkbox" data-index="${index}" ${page.checked ? 'checked' : ''} onclick="toggleCheck(${index}, event)">
+                </div>
+                <div class="page-canvas-container">
+                    <canvas id="canvas-${page.id}"></canvas>
+                </div>
+                <div class="page-footer">
+                    ${page.rotation !== 0 ? `🔄 ${page.rotation}°` : `Page ${index + 1}`}
+                </div>
+                <div class="page-actions-overlay">
+                    <button class="action-icon-btn" onclick="rotateSingle(${index}, -90, event)" title="Rotate Left">
+                        <i data-lucide="rotate-ccw"></i>
+                    </button>
+                    <button class="action-icon-btn" onclick="rotateSingle(${index}, 90, event)" title="Rotate Right">
+                        <i data-lucide="rotate-cw"></i>
+                    </button>
+                    <button class="action-icon-btn" onclick="openPreviewPage(${index}, event)" title="Preview Page">
+                        <i data-lucide="maximize-2"></i>
+                    </button>
+                    <button class="action-icon-btn delete-btn" onclick="deleteSingle(${index}, event)" title="Delete Page">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+            `;
+
+            // Append Page Card
+            pagesContainer.appendChild(pageCard);
+
+            // Drag and Drop event listeners on Page Card
+            pageCard.addEventListener('dragstart', (e) => {
+                draggedPageIndex = index;
+                pageCard.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+            
+            pageCard.addEventListener('dragend', () => {
+                pageCard.classList.remove('dragging');
+                document.querySelectorAll('.page-card').forEach(el => el.classList.remove('drag-over-left', 'drag-over-right'));
+            });
+
+            pageCard.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const rect = pageCard.getBoundingClientRect();
+                const midX = rect.left + rect.width / 2;
+                pageCard.classList.remove('drag-over-left', 'drag-over-right');
+                if (e.clientX < midX) {
+                    pageCard.classList.add('drag-over-left');
+                } else {
+                    pageCard.classList.add('drag-over-right');
+                }
+            });
+
+            pageCard.addEventListener('dragleave', () => {
+                pageCard.classList.remove('drag-over-left', 'drag-over-right');
+            });
+
+            pageCard.addEventListener('drop', (e) => {
+                e.preventDefault();
+                pageCard.classList.remove('drag-over-left', 'drag-over-right');
+                const targetIndex = parseInt(pageCard.getAttribute('data-index'));
+                
+                if (draggedPageIndex !== null && draggedPageIndex !== targetIndex) {
+                    const rect = pageCard.getBoundingClientRect();
+                    const midX = rect.left + rect.width / 2;
+                    let insertAt = targetIndex;
+                    
+                    // If dropped on the right half, insert after the target
+                    if (e.clientX >= midX && draggedPageIndex > targetIndex) {
+                        insertAt = targetIndex + 1;
+                    } else if (e.clientX < midX && draggedPageIndex < targetIndex) {
+                        insertAt = targetIndex;
+                    }
+                    
+                    // Move page element in state
+                    const draggedPage = pages.splice(draggedPageIndex, 1)[0];
+                    pages.splice(insertAt > draggedPageIndex ? insertAt - 1 : insertAt, 0, draggedPage);
+                    
+                    // Re-sync visual cuts points map
+                    const updatedCuts = new Set();
+                    cutPoints.forEach(cIndex => {
+                        if (cIndex === draggedPageIndex) {
+                            // Cut point follows the cut card boundary
+                            updatedCuts.add(insertAt > draggedPageIndex ? insertAt - 1 : insertAt);
+                        } else {
+                            // Remap cut points according to original shifted index positions
+                            let adjusted = cIndex;
+                            if (cIndex >= draggedPageIndex && cIndex < insertAt) adjusted--;
+                            else if (cIndex >= insertAt && cIndex < draggedPageIndex) adjusted++;
+                            updatedCuts.add(adjusted);
+                        }
+                    });
+                    
+                    cutPoints = updatedCuts;
+                    renderWorkspace().then(() => {
+                        lucide.createIcons();
+                        validateAndPreviewRanges();
+                    });
+                }
+            });
+
+            // Asynchronously draw thumbnail on page card's canvas
+            const canvas = document.getElementById(`canvas-${page.id}`);
+            if (canvas) {
+                renderThumbnailToCanvas(page, canvas);
+            }
+
+            // In 'visual' split mode, render visual cut dividers between elements
+            if (currentTab === "visual" && index < pages.length - 1) {
+                const divider = document.createElement('div');
+                divider.className = `cut-divider ${cutPoints.has(index) ? 'active' : ''}`;
+                divider.innerHTML = `
+                    <button class="cut-btn" title="${cutPoints.has(index) ? 'Remove Cut' : 'Split PDF Here'}">
+                        <i data-lucide="${cutPoints.has(index) ? 'scissors' : 'scissors'}"></i>
+                    </button>
+                `;
+                
+                // Toggle Cut point on click
+                divider.addEventListener('click', () => {
+                    if (cutPoints.has(index)) {
+                        cutPoints.delete(index);
+                        divider.classList.remove('active');
+                        showToast(`Removed cut after page ${index + 1}`, "info");
+                    } else {
+                        cutPoints.add(index);
+                        divider.classList.add('active');
+                        showToast(`Added cut after page ${index + 1}`, "info");
+                    }
+                    updateCutsCount();
+                });
+
+                pagesContainer.appendChild(divider);
+            }
+        }
+
+        updateSelectedCount();
+        updateCutsCount();
+        validateAndPreviewRanges();
+    }
+
+    // High performance PDF page rendering & canvas caching
+    async function renderThumbnailToCanvas(page, canvas) {
+        const pageNum = page.originalIndex + 1;
+        
+        // If thumb is cached, render from cached dataurl
+        if (page.cachedThumb) {
+            drawDataUrlToCanvas(page, canvas);
+            return;
+        }
+
+        try {
+            const pdfPage = await pdfjsDoc.getPage(pageNum);
+            const viewport = pdfPage.getViewport({ scale: 0.35 });
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+
+            const context = canvas.getContext('2d');
+            const renderContext = {
+                canvasContext: context,
+                viewport: viewport
+            };
+            
+            await pdfPage.render(renderContext).promise;
+            
+            // Cache as Data URL for super quick rearranging & rotation
+            page.cachedThumb = canvas.toDataURL();
+            
+            // Adjust visual rotation
+            applyCanvasRotation(page, canvas);
+
+        } catch (err) {
+            console.error("Error rendering thumbnail for page " + pageNum, err);
+        }
+    }
+
+    function drawDataUrlToCanvas(page, canvas) {
+        const img = new Image();
+        img.onload = function() {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            applyCanvasRotation(page, canvas);
+        };
+        img.src = page.cachedThumb;
+    }
+
+    function applyCanvasRotation(page, canvas) {
+        if (page.rotation === 90 || page.rotation === 270) {
+            // Apply scale fitting for standard A4 aspects to prevent crop
+            canvas.style.transform = `rotate(${page.rotation}deg) scale(0.707)`;
+        } else {
+            canvas.style.transform = `rotate(${page.rotation}deg) scale(1)`;
+        }
+    }
+
+    // Workspace quick tab switcher
+    function switchTab(tabId) {
+        currentTab = tabId;
+        
+        // Toggle tab activation styles
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`tab-${tabId}`).classList.add('active');
+
+        // Toggle panel display
+        document.querySelectorAll('.workspace-section').forEach(sec => sec.classList.remove('active'));
+        document.getElementById(`panel-${tabId}`).classList.add('active');
+
+        // Toggle visual elements based on active modes
+        const visualActions = document.getElementById('visualActions');
+        if (tabId === "visual") {
+            visualActions.style.display = "block";
+        } else {
+            visualActions.style.display = "none";
+        }
+
+        // Re-render workspace grid to add/remove interactive visual dividers
+        renderWorkspace().then(() => {
+            lucide.createIcons();
+        });
+    }
+
+    // Rotate and deletion overlay functions
+    function rotateSingle(index, deg, event) {
+        if (event) event.stopPropagation();
+        pages[index].rotation = (pages[index].rotation + deg + 360) % 360;
+        
+        const canvas = document.querySelector(`.page-card[data-index="${index}"] canvas`);
+        const footer = document.querySelector(`.page-card[data-index="${index}"] .page-footer`);
+        
+        if (canvas) applyCanvasRotation(pages[index], canvas);
+        if (footer) footer.innerHTML = pages[index].rotation !== 0 ? `🔄 ${pages[index].rotation}°` : `Page ${index + 1}`;
+        
+        showToast(`Rotated page ${index + 1} by ${deg > 0 ? '+90°' : '-90°'}`, "info");
+    }
+
+    function rotateAll(deg) {
+        pages.forEach((p, idx) => {
+            p.rotation = (p.rotation + deg + 360) % 360;
+        });
+        renderWorkspace().then(() => lucide.createIcons());
+        showToast(`Rotated all pages`, "success");
+    }
+
+    function deleteSingle(index, event) {
+        if (event) event.stopPropagation();
+        
+        const originalPageNum = pages[index].originalIndex + 1;
+        pages.splice(index, 1);
+        
+        // Shift cut points back if deleted page was before them
+        const updatedCuts = new Set();
+        cutPoints.forEach(cIndex => {
+            if (cIndex < index) {
+                updatedCuts.add(cIndex);
+            } else if (cIndex > index) {
+                updatedCuts.add(cIndex - 1);
+            }
+            // Cut point exactly on the deleted card is removed
+        });
+        
+        cutPoints = updatedCuts;
+        renderWorkspace().then(() => lucide.createIcons());
+        showToast(`Deleted Page ${originalPageNum} from workspace`, "info");
+    }
+
+    function toggleCheck(index, event) {
+        if (event) event.stopPropagation();
+        pages[index].checked = !pages[index].checked;
+        updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+        const count = pages.filter(p => p.checked).length;
+        const extractBtn = document.getElementById('extractBtn');
+        if (extractBtn) {
+            extractBtn.innerHTML = `Extract Selected Pages (${count})`;
+            extractBtn.disabled = count === 0;
+            if (count > 0) {
+                extractBtn.style.background = "var(--primary-color)";
+                extractBtn.style.color = "white";
+            } else {
+                extractBtn.style.background = "";
+                extractBtn.style.color = "";
+            }
+        }
+    }
+
+    function updateCutsCount() {
+        const cutsBadge = document.getElementById('visualCutsCount');
+        if (cutsBadge) {
+            cutsBadge.innerHTML = `${cutPoints.size} Cuts Placed`;
+        }
+    }
+
+    function resetWorkspace() {
+        if (confirm("Are you sure you want to reset your workspace back to the original PDF structure?")) {
+            showLoader("Restoring layout...");
+            cutPoints.clear();
+            pages.forEach((p, idx) => {
+                p.originalIndex = idx;
+                p.rotation = 0;
+                p.checked = false;
+            });
+            pages.sort((a,b) => a.originalIndex - b.originalIndex);
+            
+            renderWorkspace().then(() => {
+                hideLoader();
+                lucide.createIcons();
+                showToast("Workspace restored successfully", "success");
+            });
+        }
+    }
+
+    // High resolution preview modal functions
+    async function openPreviewPage(index, event) {
+        if (event) event.stopPropagation();
+        const page = pages[index];
+        const pageNum = page.originalIndex + 1;
+        
+        const modal = document.getElementById('previewModal');
+        const modalCanvas = document.getElementById('modalCanvas');
+        const modalSpinner = document.getElementById('modalSpinner');
+        const title = document.getElementById('previewModalTitle');
+        
+        title.innerHTML = `High Resolution Page Preview: Original Page ${pageNum}`;
+        modal.style.display = "flex";
+        modalCanvas.style.display = "none";
+        modalSpinner.style.display = "block";
+
+        try {
+            const pdfPage = await pdfjsDoc.getPage(pageNum);
+            
+            // Set scale to high resolution 1.5x
+            const viewport = pdfPage.getViewport({ scale: 1.25 });
+            modalCanvas.width = viewport.width;
+            modalCanvas.height = viewport.height;
+            
+            const context = modalCanvas.getContext('2d');
+            const renderContext = {
+                canvasContext: context,
+                viewport: viewport
+            };
+
+            await pdfPage.render(renderContext).promise;
+            
+            // Show canvas and apply current local orientation angle
+            modalSpinner.style.display = "none";
+            modalCanvas.style.display = "block";
+            
+            if (page.rotation === 90 || page.rotation === 270) {
+                modalCanvas.style.transform = `rotate(${page.rotation}deg) scale(0.65)`;
+            } else {
+                modalCanvas.style.transform = `rotate(${page.rotation}deg) scale(1)`;
+            }
+
+        } catch (err) {
+            console.error("Could not load preview", err);
+            modalSpinner.style.display = "none";
+            showToast("Failed to render page preview", "error");
+            closePreviewModal();
+        }
+    }
+
+    function closePreviewModal() {
+        document.getElementById('previewModal').style.display = "none";
+    }
+
+    // Range Split Input Parser and Preview generator
+    function parseRanges(expression, totalPages) {
+        if (!expression.trim()) return [];
+        
+        const segments = expression.split(',');
+        const results = [];
+        
+        for (const segment of segments) {
+            const trimmed = segment.trim();
+            if (!trimmed) continue;
+            
+            // Match ranges e.g. "1-3" or single numbers "4"
+            if (/^\d+-\d+$/.test(trimmed)) {
+                const parts = trimmed.split('-');
+                const start = parseInt(parts[0]);
+                const end = parseInt(parts[1]);
+                
+                if (start < 1 || end > totalPages || start > end) return null; // Invalid range
+                
+                const rangePages = [];
+                for (let i = start; i <= end; i++) {
+                    rangePages.push(i - 1); // Save 0-indexed
+                }
+                results.push({ label: `${start}-${end}`, indices: rangePages });
+                
+            } else if (/^\d+$/.test(trimmed)) {
+                const pageNum = parseInt(trimmed);
+                if (pageNum < 1 || pageNum > totalPages) return null; // Out of bounds
+                results.push({ label: `${pageNum}`, indices: [pageNum - 1] });
+            } else {
+                return null; // Syntax error
+            }
+        }
+        return results;
+    }
+
+    function validateAndPreviewRanges() {
+        if (currentTab !== "range") return;
+        
+        const val = rangeInput.value;
+        const previewContainer = document.getElementById('rangePreviewContainer');
+        const previewList = document.getElementById('rangePreviewList');
+        const applyBtn = document.getElementById('applyRangeBtn');
+
+        if (!val.trim()) {
+            previewContainer.style.display = 'none';
+            applyBtn.disabled = true;
+            return;
+        }
+
+        const parsed = parseRanges(val, pages.length);
+
+        if (parsed === null) {
+            previewContainer.style.display = 'block';
+            previewList.innerHTML = '<span style="color:var(--error-color); font-size:0.8rem; font-weight:bold;">⚠️ Invalid Syntax or Page Out of Range!</span>';
+            applyBtn.disabled = true;
+            applyBtn.style.background = "#94a3b8";
+        } else {
+            previewContainer.style.display = 'block';
+            previewList.innerHTML = '';
+            applyBtn.disabled = false;
+            applyBtn.style.background = "var(--primary-color)";
+
+            parsed.forEach((part, index) => {
+                const badge = document.createElement('div');
+                badge.style.cssText = `
+                    background: #f0fdf4;
+                    border: 1px solid #bbf7d0;
+                    color: #166534;
+                    font-size: 0.75rem;
+                    font-weight: 700;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                `;
+                badge.innerHTML = `Part ${index + 1}: Pages (${part.label})`;
+                previewList.appendChild(badge);
+            });
+        }
+    }
+
+    // ==========================================
+    // EXPORT & PDF GENERATION UTILS (pdf-lib)
+    // ==========================================
+
+    // Helper to extract page array and apply rotations to create a new PDF Document
+    async function compilePdfDoc(indices) {
+        const { PDFDocument, degrees } = PDFLib;
+        const newPdfDoc = await PDFDocument.create();
+        
+        // Load original document byte source inside pdf-lib with a slice copy to prevent detaching
+        const loadedOriginalDoc = await PDFDocument.load(originalPdfBytes.slice(0));
+        
+        for (const localIdx of indices) {
+            const pageObj = pages[localIdx];
+            
+            // Extract the original page index in the source PDF
+            const sourcePageIndex = pageObj.originalIndex;
+            
+            // Copy the page into our new split PDF document
+            const [copiedPage] = await newPdfDoc.copyPages(loadedOriginalDoc, [sourcePageIndex]);
+            
+            // Apply cumulative page rotation (original rotation + user added rotation)
+            const currentRotationAngle = copiedPage.getRotation().angle;
+            const newRotationAngle = (currentRotationAngle + pageObj.rotation) % 360;
+            copiedPage.setRotation(degrees(newRotationAngle));
+            
+            newPdfDoc.addPage(copiedPage);
+        }
+        
+        return await newPdfDoc.save();
+    }
+
+    // Trigger local download in browser
+    function triggerDownload(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    // Mode 1: Export Visual Splits
+    async function exportVisualSplits() {
+        if (pages.length === 0) return;
+        
+        hideResult();
+        showLoader("Generating visual split files...");
+
+        try {
+            // Calculate groups from cutPoints
+            const groups = [];
+            let currentGroup = [];
+            
+            for (let i = 0; i < pages.length; i++) {
+                currentGroup.push(i);
+                if (cutPoints.has(i) || i === pages.length - 1) {
+                    groups.push(currentGroup);
+                    currentGroup = [];
+                }
+            }
+
+
+
+            if (groups.length === 1) {
+                // Single document, no split needed
+                const bytes = await compilePdfDoc(groups[0]);
+                const blob = new Blob([bytes], { type: 'application/pdf' });
+                triggerDownload(blob, `${originalFileName}_rearranged.pdf`);
+                hideLoader();
+                showToast("PDF Saved!", "success");
+                return;
+            }
+
+            // Generate zip file containing all parts
+            const zip = new JSZip();
+            
+            for (let idx = 0; idx < groups.length; idx++) {
+                const group = groups[idx];
+                const bytes = await compilePdfDoc(group);
+                
+                // Pages names in this group
+                const startPageNum = group[0] + 1;
+                const endPageNum = group[group.length - 1] + 1;
+                
+                zip.file(`${originalFileName}_part_${idx + 1}_(pages_${startPageNum}-${endPageNum}).pdf`, bytes);
+            }
+
+            const zipBlob = await zip.generateAsync({ type: "blob" });
+            triggerDownload(zipBlob, `${originalFileName}_visual_splits.zip`);
+            
+            hideLoader();
+            showResult(true, `✅ Successfully generated ${groups.length} PDF files inside visual_splits.zip!`);
+            showToast("Visual splits downloaded!", "success");
+
+        } catch (err) {
+            console.error(err);
+            hideLoader();
+            showResult(false, "❌ Error creating split PDFs: " + err.message);
+            showToast("Export failed.", "error");
+        }
+    }
+
+    // Mode 2: Export Custom Ranges
+    async function exportRangeSplits() {
+        const val = rangeInput.value;
+        if (!val.trim()) return;
+
+        const parsed = parseRanges(val, pages.length);
+        if (parsed === null) {
+            showToast("Invalid range format.", "error");
+            return;
+        }
+
+        hideResult();
+        showLoader("Generating page range splits...");
+
+        try {
+            if (parsed.length === 1) {
+                // Download directly as single PDF file
+                const bytes = await compilePdfDoc(parsed[0].indices);
+                const blob = new Blob([bytes], { type: 'application/pdf' });
+                triggerDownload(blob, `${originalFileName}_pages_${parsed[0].label}.pdf`);
+                
+                hideLoader();
+                showResult(true, `✅ Successfully extracted pages (${parsed[0].label})!`);
+                showToast("Range PDF downloaded!", "success");
+            } else {
+                // Download multiple ranges compiled inside a ZIP
+                const zip = new JSZip();
+                
+                for (let idx = 0; idx < parsed.length; idx++) {
+                    const part = parsed[idx];
+                    const bytes = await compilePdfDoc(part.indices);
+                    zip.file(`${originalFileName}_part_${idx + 1}_(pages_${part.label}).pdf`, bytes);
+                }
+
+                const zipBlob = await zip.generateAsync({ type: "blob" });
+                triggerDownload(zipBlob, `${originalFileName}_range_splits.zip`);
+                
+                hideLoader();
+                showResult(true, `✅ Successfully generated ${parsed.length} range split PDFs inside range_splits.zip!`);
+                showToast("Range splits downloaded!", "success");
+            }
+
+        } catch (err) {
+            console.error(err);
+            hideLoader();
+            showResult(false, "❌ Error saving range splits: " + err.message);
+            showToast("Export failed.", "error");
+        }
+    }
+
+    // Mode 3: Export Selected Pages
+    async function exportSelected() {
+        const selectedIndices = [];
+        pages.forEach((p, idx) => {
+            if (p.checked) selectedIndices.push(idx);
+        });
+
+        if (selectedIndices.length === 0) return;
+
+        hideResult();
+        showLoader("Extracting selected pages...");
+
+        try {
+            const bytes = await compilePdfDoc(selectedIndices);
+            const blob = new Blob([bytes], { type: 'application/pdf' });
+            triggerDownload(blob, `${originalFileName}_extracted.pdf`);
+            
+            hideLoader();
+            showResult(true, `✅ Extracted ${selectedIndices.length} pages into a single PDF successfully!`);
+            showToast("Extracted PDF downloaded!", "success");
+
+        } catch (err) {
+            console.error(err);
+            hideLoader();
+            showResult(false, "❌ Error extracting selection: " + err.message);
+            showToast("Extraction failed.", "error");
+        }
+    }
+
+    // Mode 4: Split Every Page
+    async function exportEveryPage() {
+        if (pages.length === 0) return;
+
+        hideResult();
+        showLoader("Exploding PDF into single pages...");
+
+        try {
+            const zip = new JSZip();
+            
+            for (let idx = 0; idx < pages.length; idx++) {
+                const bytes = await compilePdfDoc([idx]);
+                zip.file(`${originalFileName}_page_${idx + 1}.pdf`, bytes);
+            }
+
+            const zipBlob = await zip.generateAsync({ type: "blob" });
+            triggerDownload(zipBlob, `${originalFileName}_all_single_pages.zip`);
+            
+            hideLoader();
+            showResult(true, `✅ Successfully split all ${pages.length} pages into single-page PDFs!`);
+            showToast("Single pages ZIP downloaded!", "success");
+
+        } catch (err) {
+            console.error(err);
+            hideLoader();
+            showResult(false, "❌ Error separating pages: " + err.message);
+            showToast("Split failed.", "error");
+        }
+    }
+
+    // ==========================================
+    // UI FEEDBACK UTILITY HELPERS
+    // ==========================================
+
+    function showLoader(message) {
+        loaderText.innerHTML = message;
+        loader.style.display = "flex";
+        workspace.style.display = "none";
+        dropzone.style.display = "none";
+        hideResult();
+    }
+
+    function hideLoader() {
+        loader.style.display = "none";
+    }
+
+    function showResult(isValid, message) {
+        resultDiv.innerHTML = message;
+        resultDiv.style.display = 'block';
+        resultDiv.className = isValid ? 'valid' : 'invalid';
+    }
+
+    function hideResult() {
+        resultDiv.style.display = 'none';
+    }
+
+    function showToast(message, type = "success") {
+        const toast = document.getElementById('toast');
+        const textSpan = document.getElementById('toastMessage');
+        const iconSpan = document.getElementById('toastIcon');
+
+        textSpan.innerHTML = message;
+        toast.className = `toast show toast-${type}`;
+
+        // Map icons dynamically
+        if (type === "success") {
+            iconSpan.innerHTML = "✅";
+        } else if (type === "error") {
+            iconSpan.innerHTML = "❌";
+        } else if (type === "info") {
+            iconSpan.innerHTML = "ℹ️";
+        }
+
+        // Hide after 3.5 seconds
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3500);
+    }
+</script>
+
+</body>
+</html>
