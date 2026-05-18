@@ -710,15 +710,35 @@
     }
 
     function resetWorkspace() {
-        if (confirm("Are you sure you want to reset your workspace back to the original PDF structure?")) {
+        if (!pdfjsDoc) return;
+        
+        if (confirm("Are you sure you want to reset your workspace back to the original PDF structure? All pages, rotations, and cuts will be restored.")) {
             showLoader("Restoring layout...");
             cutPoints.clear();
-            pages.forEach((p, idx) => {
-                p.originalIndex = idx;
-                p.rotation = 0;
-                p.checked = false;
+            
+            // Map existing cached thumbnails by originalIndex so we don't re-render them
+            const thumbMap = {};
+            pages.forEach(p => {
+                if (p.cachedThumb) {
+                    thumbMap[p.originalIndex] = p.cachedThumb;
+                }
             });
-            pages.sort((a,b) => a.originalIndex - b.originalIndex);
+            
+            // Re-populate the complete original pages list
+            pages = [];
+            for (let i = 0; i < pdfjsDoc.numPages; i++) {
+                pages.push({
+                    id: 'page-' + Math.random().toString(36).substr(2, 9),
+                    originalIndex: i,
+                    rotation: 0,
+                    checked: false,
+                    cachedThumb: thumbMap[i] || null
+                });
+            }
+            
+            rangeInput.value = "";
+            const rangePreview = document.getElementById('rangePreviewContainer');
+            if (rangePreview) rangePreview.style.display = 'none';
             
             renderWorkspace().then(() => {
                 hideLoader();
@@ -1090,6 +1110,11 @@
 
     function hideLoader() {
         loader.style.display = "none";
+        if (pdfjsDoc) {
+            workspace.style.display = "block";
+        } else {
+            dropzone.style.display = "flex";
+        }
     }
 
     function showResult(isValid, message) {
