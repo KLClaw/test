@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium QR Code Generator</title>
+    <!-- Link to global styles -->
+    <link rel="stylesheet" href="../styles.css">
+    <!-- QR Code Generator library Kazuhiko Arase via CDNjs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <style>
+        /* Scoped Premium UI Layout styling */
+        .card {
+            max-width: 900px;
+            width: 95%;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        .app-layout {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 30px;
+            margin-top: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .app-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Controls Section */
+        .controls-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-label {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #495057;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-label span.desc {
+            font-size: 0.75rem;
+            color: #6c757d;
+            font-weight: normal;
+        }
+
+        .url-input {
+            width: 100%;
+            padding: 12px;
+            margin: 0;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            text-transform: none;
+            transition: all 0.2s;
+        }
+
+        .url-input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+        }
+
+        /* Color Theme Presets */
+        .presets-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .preset-btn {
+            border: 2px solid #e9ecef;
+            background: #fff;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .preset-btn:hover {
+            border-color: #ced4da;
+            background: #f8f9fa;
+        }
+
+        .preset-btn.active {
+            border-color: var(--primary-color);
+            background: rgba(0, 123, 255, 0.05);
+        }
+
+        .preset-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        /* Custom Color Pickers */
+        .color-pickers {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .color-picker-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            padding: 8px 12px;
+            border-radius: 8px;
+        }
+
+        .color-picker-wrapper input[type="color"] {
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            background: none;
+            padding: 0;
+        }
+
+        /* Logo Selection Styling */
+        .logo-tabs {
+            display: flex;
+            background: #e9ecef;
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .logo-tab {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #495057;
+            transition: all 0.2s;
+        }
+
+        .logo-tab.active {
+            background: #fff;
+            color: #000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .logo-content {
+            display: none;
+            padding: 12px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            margin-top: -6px;
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+        }
+
+        .logo-content.active {
+            display: block;
+        }
+
+        /* Emoji Grid */
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+        }
+
+        .emoji-btn {
+            background: #fff;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 1.4rem;
+            padding: 6px 0;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .emoji-btn:hover {
+            transform: scale(1.1);
+            border-color: var(--primary-color);
+        }
+
+        .emoji-btn.active {
+            background: rgba(0, 123, 255, 0.1);
+            border-color: var(--primary-color);
+        }
+
+        /* Image upload handle */
+        .file-upload-box {
+            border: 2px dashed #ced4da;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            background: #fff;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .file-upload-box:hover {
+            border-color: var(--primary-color);
+        }
+
+        /* Smartphone Preview Overlay */
+        .phone-mockup-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .phone-container {
+            width: 270px;
+            height: 520px;
+            background: #111;
+            border-radius: 36px;
+            border: 8px solid #222;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Notch */
+        .phone-notch {
+            width: 110px;
+            height: 18px;
+            background: #222;
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            border-bottom-left-radius: 12px;
+            border-bottom-right-radius: 12px;
+            z-index: 10;
+        }
+
+        /* Phone Screen */
+        .phone-screen {
+            flex-grow: 1;
+            background: #000;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* Finder Target Box */
+        .scanner-finder {
+            width: 190px;
+            height: 190px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 16px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            background: rgba(0,0,0,0.4);
+        }
+
+        /* Glowing Brackets */
+        .scanner-corner {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border: 3px solid #20c997;
+        }
+        .sc-tl { top: -2px; left: -2px; border-right: none; border-bottom: none; border-top-left-radius: 8px; }
+        .sc-tr { top: -2px; right: -2px; border-left: none; border-bottom: none; border-top-right-radius: 8px; }
+        .sc-bl { bottom: -2px; left: -2px; border-right: none; border-top: none; border-bottom-left-radius: 8px; }
+        .sc-br { bottom: -2px; right: -2px; border-left: none; border-top: none; border-bottom-right-radius: 8px; }
+
+
+
+        /* Actual QR Code displayed in the phone screen */
+        .phone-qrcode-wrapper {
+            width: 160px;
+            height: 160px;
+            background: #fff;
+            border-radius: 8px;
+            padding: 8px;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .phone-qrcode-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* Action Buttons */
+        .actions-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 1.5rem;
+        }
+
+        .export-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            padding: 12px;
+        }
+
+        .export-btn-outline {
+            background-color: transparent;
+            border: 2px solid var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .export-btn-outline:hover {
+            background-color: rgba(0, 123, 255, 0.05);
+        }
+
+        /* Hidden Master Canvas for generation */
+        #qrCanvas {
+            display: none;
+        }
+
+        /* Toast Popup Notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            background: #333;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s, transform 0.2s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 100;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Slider adjustments */
+        .slider-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .slider-row input[type="range"] {
+            flex-grow: 1;
+            margin: 0;
+        }
+    </style>
+</head>
+<body style="padding-top: 2rem; padding-bottom: 2rem;">
+
+<div class="card">
+    <a href="../index.html" class="back-btn">← Back to Menu</a>
+    <h2 style="margin-top: 10px; margin-bottom: 5px;">Premium QR Code Generator</h2>
+    <p style="margin-top: 0; color: var(--text-muted); font-size: 0.9rem;">Design bespoke QR codes instantly with logo templates, custom color grids, and copy layouts.</p>
+
+    <!-- Hidden calculation canvas -->
+    <canvas id="qrCanvas" width="1024" height="1024"></canvas>
+    <!-- Clipboard notification -->
+    <div id="toast" class="toast">Copied QR Code Image!</div>
+
+    <div class="app-layout">
+        <!-- Controls Column -->
+        <div class="controls-section">
+            
+            <!-- URL / Content input -->
+            <div class="control-group">
+                <label class="control-label" for="qrText">
+                    Destination URL
+                    <span class="desc">Instantly updates the scanner code</span>
+                </label>
+                <input type="text" id="qrText" class="url-input" placeholder="e.g. https://github.com" value="https://github.com" oninput="updateQR()">
+            </div>
+
+            <!-- Curated Palette Presets -->
+            <div class="control-group">
+                <label class="control-label">Visual Themes</label>
+                <div class="presets-grid">
+                    <button class="preset-btn active" onclick="applyPreset('#000000', '#ffffff', this)">
+                        <span class="preset-dot" style="background: #000;"></span>Classic
+                    </button>
+                    <button class="preset-btn" onclick="applyPreset('#1f2937', '#fef3c7', this)">
+                        <span class="preset-dot" style="background: #1f2937;"></span>Vintge
+                    </button>
+                    <button class="preset-btn" onclick="applyPreset('#065f46', '#ecfdf5', this)">
+                        <span class="preset-dot" style="background: #065f46;"></span>Forest
+                    </button>
+                    <button class="preset-btn" onclick="applyPreset('#6b21a8', '#fdf4ff', this)">
+                        <span class="preset-dot" style="background: #6b21a8;"></span>Sunset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Custom Color Pickers -->
+            <div class="control-group">
+                <label class="control-label">Custom Palette</label>
+                <div class="color-pickers">
+                    <div class="color-picker-wrapper">
+                        <input type="color" id="colorDark" value="#000000" oninput="updateQR()">
+                        <span style="font-size: 0.8rem; font-weight: 600; color: #495057;">Foreground</span>
+                    </div>
+                    <div class="color-picker-wrapper">
+                        <input type="color" id="colorLight" value="#ffffff" oninput="updateQR()">
+                        <span style="font-size: 0.8rem; font-weight: 600; color: #495057;">Background</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logo Tabs and Controls -->
+            <div class="control-group">
+                <label class="control-label">Center Branding</label>
+                <div class="logo-tabs">
+                    <button id="tabNone" class="logo-tab active" onclick="switchLogoTab('none')">None</button>
+                    <button id="tabEmoji" class="logo-tab" onclick="switchLogoTab('emoji')">Preset Emoji</button>
+                    <button id="tabImage" class="logo-tab" onclick="switchLogoTab('image')">Custom Image</button>
+                </div>
+
+                <!-- Tab content blocks -->
+                <div id="contentNone" class="logo-content active" style="font-size: 0.8rem; color: #6c757d; border-radius: 8px;">
+                    No logo overlay active. Standard QR code will be generated.
+                </div>
+
+                <div id="contentEmoji" class="logo-content">
+                    <div class="emoji-grid">
+                        <button class="emoji-btn active" onclick="selectEmoji('🔗', this)">🔗</button>
+                        <button class="emoji-btn" onclick="selectEmoji('❤️', this)">❤️</button>
+                        <button class="emoji-btn" onclick="selectEmoji('⭐', this)">⭐</button>
+                        <button class="emoji-btn" onclick="selectEmoji('📧', this)">📧</button>
+                        <button class="emoji-btn" onclick="selectEmoji('📱', this)">📱</button>
+                        <button class="emoji-btn" onclick="selectEmoji('☕', this)">☕</button>
+                    </div>
+                </div>
+
+                <div id="contentImage" class="logo-content">
+                    <label class="file-upload-box" for="imageUpload" id="uploadBoxLabel">
+                        <span style="font-size: 0.85rem; font-weight: bold; color: var(--primary-color);">Choose Logo File</span>
+                        <br><span style="font-size: 0.75rem; color: #6c757d;">Supports PNG, JPG, or SVG</span>
+                        <input type="file" id="imageUpload" style="display: none;" accept="image/*" onchange="handleImageUpload(this)">
+                    </label>
+                </div>
+            </div>
+
+            <!-- Logo Size Control Slider -->
+            <div class="control-group" id="logoSizeWrapper" style="display: none;">
+                <label class="control-label">
+                    Logo Scale Size
+                    <span id="logoSizeText" style="font-size: 0.8rem; font-weight: bold; color: var(--primary-color);">20%</span>
+                </label>
+                <div class="slider-row">
+                    <span>10%</span>
+                    <input type="range" id="logoSize" class="slider" min="10" max="30" value="20" oninput="updateLogoSize(this.value)">
+                    <span>30%</span>
+                </div>
+            </div>
+
+            <!-- Error Correction Level Select -->
+            <div class="control-group">
+                <label class="control-label">
+                    Error Correction Safeguard
+                    <span class="desc">Helps scannability under center logo masks</span>
+                </label>
+                <div class="slider-row" style="background: #f8f9fa; border: 2px solid #e9ecef; padding: 6px 12px; border-radius: 8px;">
+                    <select id="eccLevel" style="border: none; background: transparent; width: 100%; font-size: 0.95rem; font-weight: bold; cursor: pointer; outline: none;" onchange="updateQR()">
+                        <option value="L">Low (L) — 7% recovery (Best for standard QR)</option>
+                        <option value="M">Medium (M) — 15% recovery</option>
+                        <option value="Q">Quartile (Q) — 25% recovery</option>
+                        <option value="H" selected>High (H) — 30% recovery (Mandatory for logos)</option>
+                    </select>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Phone Preview Mockup Column -->
+        <div class="phone-mockup-wrapper">
+            <div class="phone-container">
+                <div class="phone-notch"></div>
+                <div class="phone-screen">
+                    <!-- Viewfinder Frame -->
+                    <div class="scanner-finder">
+                        <div class="scanner-corner sc-tl"></div>
+                        <div class="scanner-corner sc-tr"></div>
+                        <div class="scanner-corner sc-bl"></div>
+                        <div class="scanner-corner sc-br"></div>
+                        
+                        <!-- Inside Viewfinder resides the generated QR code -->
+                        <div class="phone-qrcode-wrapper">
+                            <img id="phoneQRPreview" class="phone-qrcode-image" src="" alt="QR Code Preview">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Action Triggers -->
+    <div class="actions-row">
+        <button class="export-btn" onclick="downloadQRCode()">
+            <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: currentColor;"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+            Download PNG File
+        </button>
+        <button class="export-btn export-btn-outline" onclick="copyQRToClipboard()">
+            <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: currentColor;"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+            Copy Image Blob
+        </button>
+    </div>
+</div>
+
+<script>
+    let activeLogoType = 'none';
+    let selectedEmojiChar = '🔗';
+    let uploadedImageElement = null;
+
+    // Synchronize preset clicks with color variables
+    function applyPreset(darkColor, lightColor, btnElement) {
+        document.getElementById('colorDark').value = darkColor;
+        document.getElementById('colorLight').value = lightColor;
+        
+        // Handle visual selection class
+        document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+        btnElement.classList.add('active');
+        
+        updateQR();
+    }
+
+    // Toggle different Branding panels
+    function switchLogoTab(tabName) {
+        activeLogoType = tabName;
+        
+        // Toggle tab highlights
+        document.querySelectorAll('.logo-tab').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.add('active');
+        
+        // Toggle content containers
+        document.querySelectorAll('.logo-content').forEach(box => box.classList.remove('active'));
+        document.getElementById('content' + tabName.charAt(0).toUpperCase() + tabName.slice(1)).classList.add('active');
+        
+        // Show/hide size controls
+        const sizeWrapper = document.getElementById('logoSizeWrapper');
+        if (tabName === 'none') {
+            sizeWrapper.style.display = 'none';
+        } else {
+            sizeWrapper.style.display = 'block';
+        }
+        
+        updateQR();
+    }
+
+    // Select emoji to render in code center
+    function selectEmoji(emojiChar, btnElement) {
+        selectedEmojiChar = emojiChar;
+        
+        // Handle selection outline highlights
+        document.querySelectorAll('.emoji-btn').forEach(btn => btn.classList.remove('active'));
+        btnElement.classList.add('active');
+        
+        updateQR();
+    }
+
+    // Image upload local browser parse
+    function handleImageUpload(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                uploadedImageElement = img;
+                
+                // Update file upload UI
+                const uploadBox = document.getElementById('uploadBoxLabel');
+                uploadBox.innerHTML = `<span style="font-size: 0.85rem; font-weight: bold; color: var(--success-color);">✓ Loaded Successfully</span><br><span style="font-size: 0.7rem; color: #6c757d;">${file.name}</span>`;
+                
+                updateQR();
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Size range slide sync
+    function updateLogoSize(value) {
+        document.getElementById('logoSizeText').textContent = value + '%';
+        updateQR();
+    }
+
+    // Master draw routine
+    function updateQR() {
+        const text = document.getElementById('qrText').value;
+        const colorDark = document.getElementById('colorDark').value;
+        const colorLight = document.getElementById('colorLight').value;
+        const ecc = document.getElementById('eccLevel').value;
+        
+        const canvas = document.getElementById('qrCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (!text) {
+            document.getElementById('phoneQRPreview').src = "";
+            return;
+        }
+
+        // Generate QR code structures using kazuhiko arase lib
+        let qr;
+        try {
+            qr = qrcode(0, ecc);
+            qr.addData(text);
+            qr.make();
+        } catch (e) {
+            console.error(e);
+            return;
+        }
+
+        const count = qr.getModuleCount();
+        const size = canvas.width;
+        const cellSize = size / count;
+
+        // 1. Draw solid light background
+        ctx.fillStyle = colorLight;
+        ctx.fillRect(0, 0, size, size);
+
+        // 2. Draw standard dark matrix modules
+        ctx.fillStyle = colorDark;
+        for (let r = 0; r < count; r++) {
+            for (let c = 0; c < count; c++) {
+                if (qr.isDark(r, c)) {
+                    // +0.5 pixels overlap handles rendering anti-aliasing gaps between cells
+                    ctx.fillRect(c * cellSize, r * cellSize, cellSize + 0.5, cellSize + 0.5);
+                }
+            }
+        }
+
+        // 3. Render brandings/overlay masks
+        if (activeLogoType !== 'none') {
+            const logoPercent = parseInt(document.getElementById('logoSize').value, 10) / 100;
+            const logoSize = size * logoPercent;
+            const center = size / 2;
+            const half = logoSize / 2;
+
+            // Draw a solid mask behind center branding to prevent QR lines showing through
+            ctx.fillStyle = colorLight;
+            ctx.beginPath();
+            // Draw clean rounded shield circles
+            ctx.arc(center, center, half + 14, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Overlay boundaries
+            if (activeLogoType === 'emoji') {
+                ctx.fillStyle = colorDark;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                // Calculate font sizes
+                ctx.font = `${logoSize * 0.9}px Apple Color Emoji, Segoe UI Emoji, sans-serif`;
+                ctx.fillText(selectedEmojiChar, center, center);
+            } else if (activeLogoType === 'image' && uploadedImageElement) {
+                // Render uploaded corporate logotypes
+                ctx.drawImage(uploadedImageElement, center - half, center - half, logoSize, logoSize);
+            }
+        }
+
+        // 4. Update responsive preview mockup element
+        const dataUrl = canvas.toDataURL('image/png');
+        document.getElementById('phoneQRPreview').src = dataUrl;
+    }
+
+    // High quality file download
+    function downloadQRCode() {
+        const text = document.getElementById('qrText').value;
+        if (!text) return;
+
+        const canvas = document.getElementById('qrCanvas');
+        const link = document.createElement('a');
+        link.download = 'custom-qrcode.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    }
+
+    // Copy Canvas directly into the System Clipboard
+    function copyQRToClipboard() {
+        const canvas = document.getElementById('qrCanvas');
+        const text = document.getElementById('qrText').value;
+        if (!text) return;
+
+        canvas.toBlob(blob => {
+            if (!blob) return;
+            
+            navigator.clipboard.write([
+                new ClipboardItem({ 'image/png': blob })
+            ]).then(() => {
+                showToast();
+            }).catch(err => {
+                console.error("Failed to copy image: ", err);
+            });
+        }, 'image/png');
+    }
+
+    // Copy alert banner trigger
+    function showToast() {
+        const toast = document.getElementById('toast');
+        toast.classList.add('show');
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 2000);
+    }
+
+    // Launch master rendering on load
+    window.onload = function() {
+        updateQR();
+    };
+</script>
+
+</body>
+</html>

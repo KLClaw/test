@@ -40,5 +40,11 @@
     "path": "password-generator/index.html",
     "icon": "🔑",
     "description": "Generate cryptographically secure passwords with custom rules"
+  },
+  {
+    "name": "QR Code Generator",
+    "path": "qr-generator/index.html",
+    "icon": "📱",
+    "description": "Create beautiful, customized QR codes with colors, sizes, and center logos"
   }
 ]
