@@ -46,5 +46,11 @@
     "path": "qr-generator/index.html",
     "icon": "📱",
     "description": "Create beautiful, customized QR codes with colors, sizes, and center logos"
+  },
+  {
+    "name": "Image Resizer & EXIF Editor",
+    "path": "image-editor/index.html",
+    "icon": "🖼️",
+    "description": "Resize pictures, convert formats, and edit or strip EXIF metadata"
   }
 ]

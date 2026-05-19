@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Resizer & EXIF Editor</title>
+    <!-- Link to global styles -->
+    <link rel="stylesheet" href="../styles.css">
+    <!-- piexif.js library via CDNjs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/piexifjs/2.0.0-beta.7/piexif.min.js"></script>
+    <style>
+        /* Scoped Premium UI Layout styling */
+        .card {
+            max-width: 950px;
+            width: 95%;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        .app-layout {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 30px;
+            margin-top: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .app-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Controls Section */
+        .controls-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            padding: 14px;
+            border-radius: 10px;
+        }
+
+        .section-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #212529;
+            margin: 0 0 6px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #495057;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-label span.desc {
+            font-size: 0.75rem;
+            color: #6c757d;
+            font-weight: normal;
+        }
+
+        /* Drop Zone */
+        .drop-zone {
+            border: 2px dashed #ced4da;
+            padding: 25px 15px;
+            border-radius: 8px;
+            text-align: center;
+            background: #fff;
+            cursor: pointer;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--primary-color);
+            background-color: rgba(0, 123, 255, 0.02);
+        }
+
+        /* Input Controls styling */
+        .number-input, .text-input {
+            padding: 8px 12px;
+            border: 2px solid #ced4da;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            outline: none;
+            width: 100%;
+            box-sizing: border-box;
+            text-transform: none;
+            margin: 0;
+        }
+
+        .number-input:focus, .text-input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .dimension-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            align-items: end;
+            gap: 10px;
+        }
+
+        /* Presets */
+        .presets-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .preset-pill {
+            background: #fff;
+            border: 1px solid #ced4da;
+            border-radius: 20px;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #495057;
+            transition: all 0.2s;
+        }
+
+        .preset-pill:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        /* Lock Aspect Ratio Button */
+        .lock-btn {
+            background: #fff;
+            border: 2px solid #ced4da;
+            border-radius: 6px;
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            height: 38px;
+            width: 38px;
+            box-sizing: border-box;
+            transition: all 0.2s;
+        }
+
+        .lock-btn:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .lock-btn.locked {
+            border-color: var(--primary-color);
+            background-color: rgba(0, 123, 255, 0.05);
+            color: var(--primary-color);
+        }
+
+        .lock-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* Mode Selector Tabs */
+        .mode-tabs {
+            display: flex;
+            background: #e9ecef;
+            border-radius: 8px;
+            padding: 4px;
+            gap: 4px;
+        }
+
+        .mode-tab {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #495057;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .mode-tab.active {
+            background: #fff;
+            color: #000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        /* EXIF Form Grid */
+        .exif-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .exif-full {
+            grid-column: span 2;
+        }
+
+        /* Visual Dashboard Column */
+        .dashboard-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .preview-box {
+            background: #fff;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 250px;
+            position: relative;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+        }
+
+        .preview-img {
+            max-width: 100%;
+            max-height: 280px;
+            border-radius: 6px;
+            object-fit: contain;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+            background: #f8f9fa;
+        }
+
+        .stats-card {
+            background: #fff;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 14px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f3f5;
+            font-size: 0.85rem;
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            font-weight: 600;
+            color: #6c757d;
+        }
+
+        .stat-val {
+            font-weight: 700;
+            color: #212529;
+        }
+
+        .stat-saving {
+            color: var(--success-color);
+            background: rgba(40, 167, 69, 0.1);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+        }
+
+        /* Dynamic quality indicators */
+        .quality-desc {
+            font-size: 0.75rem;
+            color: #6c757d;
+            font-weight: normal;
+        }
+
+        /* SVG definitions */
+        .icon {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body style="padding-top: 2rem; padding-bottom: 2rem;">
+
+<div class="card">
+    <a href="../index.html" class="back-btn">← Back to Menu</a>
+    <h2 style="margin-top: 10px; margin-bottom: 5px;">Image Resizer & EXIF Editor</h2>
+    <p style="margin-top: 0; color: var(--text-muted); font-size: 0.9rem;">Change dimensions, scale qualities, and strip or customize photo coordinates and camera properties.</p>
+
+    <!-- App Grid -->
+    <div class="app-layout">
+        
+        <!-- Controls Column -->
+        <div class="controls-section">
+            
+            <!-- Upload Area -->
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('imageFile').click()">
+                <svg class="icon" viewBox="0 0 24 24" style="width: 32px; height: 32px; color: var(--primary-color); margin-bottom: 8px;"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
+                <br><span style="font-size: 0.9rem; font-weight: bold;">Drag & Drop or Choose Image</span>
+                <br><span style="font-size: 0.75rem; color: #6c757d;">Supports JPG, PNG, WEBP files</span>
+                <input type="file" id="imageFile" style="display: none;" accept="image/*" onchange="handleImageFile(this)">
+            </div>
+
+            <!-- Resize Configuration Panel -->
+            <div class="control-group" id="panelResize" style="display: none;">
+                <h4 class="section-title">Dimensions Scaling</h4>
+                
+                <!-- Dimension Inputs Grid -->
+                <div class="dimension-grid">
+                    <div>
+                        <label class="control-label" style="margin-bottom: 4px;">Width (px)</label>
+                        <input type="number" id="imgWidth" class="number-input" oninput="changeWidth(this.value)">
+                    </div>
+                    <div>
+                        <label class="control-label" style="margin-bottom: 4px;">Height (px)</label>
+                        <input type="number" id="imgHeight" class="number-input" oninput="changeHeight(this.value)">
+                    </div>
+                    <div>
+                        <button id="aspectLock" class="lock-btn locked" title="Lock Aspect Ratio" onclick="toggleAspectLock()">
+                            <svg viewBox="0 0 24 24">
+                                <path id="lockPath" d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Presets -->
+                <div style="margin-top: 8px;">
+                    <label class="control-label" style="margin-bottom: 4px;">Quick Presets</label>
+                    <div class="presets-row">
+                        <button class="preset-pill" onclick="applyPreset(1920, 1080)">1080p (Full HD)</button>
+                        <button class="preset-pill" onclick="applyPreset(1080, 1080)">Square (Instagram)</button>
+                        <button class="preset-pill" onclick="applyPreset(1200, 630)">Landscape (Link)</button>
+                        <button class="preset-pill" onclick="applyPreset(512, 512)">Avatar/Icon</button>
+                    </div>
+                </div>
+
+                <!-- Percentage Slider -->
+                <div style="margin-top: 10px;">
+                    <label class="control-label">
+                        Resize Ratio
+                        <span id="percentLabel" style="font-weight: bold; color: var(--primary-color);">100%</span>
+                    </label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span>10%</span>
+                        <input type="range" id="resizeRatio" class="slider" min="10" max="150" value="100" style="flex-grow: 1;" oninput="changeRatio(this.value)">
+                        <span>150%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Formats Panel -->
+            <div class="control-group" id="panelExport" style="display: none;">
+                <h4 class="section-title">Format & Quality Settings</h4>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 15px;">
+                    <div>
+                        <label class="control-label" style="margin-bottom: 4px;">Format</label>
+                        <select id="exportFormat" class="number-input" style="height: 38px; cursor: pointer; font-weight: bold;" onchange="changeFormat(this.value)">
+                            <option value="image/jpeg">JPEG (.jpg)</option>
+                            <option value="image/png">PNG (.png)</option>
+                            <option value="image/webp">WEBP (.webp)</option>
+                        </select>
+                    </div>
+                    
+                    <div id="qualityWrapper">
+                        <label class="control-label" style="margin-bottom: 4px;">
+                            Quality
+                            <span id="qualityLabel" class="quality-desc" style="font-weight: bold; color: var(--primary-color);">85%</span>
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span>10%</span>
+                            <input type="range" id="exportQuality" class="slider" min="10" max="100" value="85" style="flex-grow: 1;" oninput="changeQuality(this.value)">
+                            <span>100%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EXIF Metadata Editor Panel -->
+            <div class="control-group" id="panelExif" style="display: none;">
+                <h4 class="section-title">EXIF Metadata Protection</h4>
+                
+                <!-- Tab bar -->
+                <div class="mode-tabs">
+                    <button id="exifTabStrip" class="mode-tab active" onclick="switchExifMode('strip')">🗑️ Strip All</button>
+                    <button id="exifTabKeep" class="mode-tab" onclick="switchExifMode('keep')">💾 Keep Original</button>
+                    <button id="exifTabCustom" class="mode-tab" onclick="switchExifMode('custom')">✍️ Customize</button>
+                </div>
+
+                <!-- Custom inputs display -->
+                <div id="exifFormContainer" style="display: none; margin-top: 10px;">
+                    <div class="exif-grid">
+                        <div>
+                            <label class="control-label" style="margin-bottom: 2px;">Camera Make</label>
+                            <input type="text" id="exifMake" class="text-input" placeholder="e.g. Apple">
+                        </div>
+                        <div>
+                            <label class="control-label" style="margin-bottom: 2px;">Camera Model</label>
+                            <input type="text" id="exifModel" class="text-input" placeholder="e.g. iPhone 15 Pro">
+                        </div>
+                        <div class="exif-full">
+                            <label class="control-label" style="margin-bottom: 2px;">Capture Time</label>
+                            <input type="datetime-local" id="exifDateTime" class="text-input" style="height: 38px;">
+                        </div>
+                        <div>
+                            <label class="control-label" style="margin-bottom: 2px;">GPS Latitude</label>
+                            <input type="number" id="exifLat" class="text-input" step="0.0001" placeholder="e.g. 1.3521" min="-90" max="90">
+                        </div>
+                        <div>
+                            <label class="control-label" style="margin-bottom: 2px;">GPS Longitude</label>
+                            <input type="number" id="exifLng" class="text-input" step="0.0001" placeholder="e.g. 103.8198" min="-180" max="180">
+                        </div>
+                        <div class="exif-full" style="text-align: right;">
+                            <button class="preset-pill" style="margin: 0; background: #fff;" onclick="fillMockGPS()">Fill Mock Geotag</button>
+                            <button class="preset-pill" style="margin: 0; background: #fff;" onclick="clearGPSFields()">Clear GPS</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="exifStrippedNotice" style="font-size: 0.75rem; color: var(--success-color); font-weight: 600; margin-top: 10px;">
+                    ✓ Strip EXIF active. All geotags and camera tracking signatures will be removed.
+                </div>
+                <div id="exifKeepNotice" style="font-size: 0.75rem; color: #6c757d; font-weight: 600; margin-top: 10px; display: none;">
+                    ℹ Keep original active. Metadata headers will be extracted and injected into the resized output.
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Visual Dashboard Column -->
+        <div class="dashboard-column">
+            
+            <!-- Visual Preview Canvas container -->
+            <div class="preview-box">
+                <span id="previewPlaceholder" style="color: #adb5bd; font-weight: bold; text-align: center;">Upload an image file<br>to view preview</span>
+                <img id="previewImg" class="preview-img" style="display: none;" alt="Preview render">
+            </div>
+
+            <!-- Detailed Stats Table -->
+            <div class="stats-card" id="statsCard" style="display: none;">
+                <h4 style="margin: 0 0 10px 0; font-size: 0.9rem; color: #212529;">Image Metrics</h4>
+                <div class="stat-row">
+                    <span class="stat-label">Dimensions</span>
+                    <span class="stat-val"><span id="statSizeOrig">0 x 0</span> → <span id="statSizeNew" style="color: var(--primary-color);">0 x 0</span></span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">File Weight</span>
+                    <span class="stat-val"><span id="statWeightOrig">0 KB</span> → <span id="statWeightNew" style="color: var(--primary-color);">0 KB</span></span>
+                </div>
+                <div class="stat-row" id="savingRow" style="display: none;">
+                    <span class="stat-label">File Saving</span>
+                    <span class="stat-saving" id="statSavingRatio">-0%</span>
+                </div>
+                <div class="stat-row" id="exifStatusRow">
+                    <span class="stat-label">EXIF Headers</span>
+                    <span class="stat-val" id="statExifCount" style="color: #6c757d;">None parsed</span>
+                </div>
+            </div>
+
+            <!-- Single Trigger Action -->
+            <button id="downloadBtn" style="display: none; padding: 14px;" class="back-btn" onclick="executeResizeAndDownload()">
+                <svg class="icon" viewBox="0 0 24 24" style="margin-right: 6px; width: 20px; height: 20px;"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+                Process & Download Image
+            </button>
+
+        </div>
+
+    </div>
+</div>
+
+<script>
+    let originalImage = null;
+    let originalFormat = "";
+    let originalFileName = "";
+    let originalFileSize = 0;
+    
+    let isAspectLocked = true;
+    let originalAspectRatio = 1.0;
+    
+    let originalExifObj = null;
+    let activeExifMode = 'strip';
+
+    // Drag-and-drop bindings
+    const dropZone = document.getElementById('dropZone');
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, e => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+        }, false);
+    });
+
+    dropZone.addEventListener('drop', e => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files.length > 0) {
+            document.getElementById('imageFile').files = files;
+            handleImageFile(document.getElementById('imageFile'));
+        }
+    });
+
+    // File selection reader callback
+    function handleImageFile(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        originalFileName = file.name;
+        originalFileSize = file.size;
+        originalFormat = file.type;
+
+        // Auto select correct export formats based on input
+        if (originalFormat === 'image/png' || originalFormat === 'image/jpeg' || originalFormat === 'image/webp') {
+            document.getElementById('exportFormat').value = originalFormat;
+            changeFormat(originalFormat);
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const dataUrl = e.target.result;
+            
+            // Read metadata using piexif
+            try {
+                if (originalFormat === 'image/jpeg') {
+                    originalExifObj = piexif.load(dataUrl);
+                    populateExifForm(originalExifObj);
+                } else {
+                    originalExifObj = null;
+                    clearGPSFields();
+                }
+            } catch (err) {
+                console.error("EXIF Load Error: ", err);
+                originalExifObj = null;
+            }
+
+            const img = new Image();
+            img.onload = function() {
+                originalImage = img;
+                originalAspectRatio = img.width / img.height;
+
+                // Sync sizes
+                document.getElementById('imgWidth').value = img.width;
+                document.getElementById('imgHeight').value = img.height;
+                document.getElementById('resizeRatio').value = 100;
+                document.getElementById('percentLabel').textContent = "100%";
+
+                // Update UI panels
+                document.getElementById('panelResize').style.display = 'flex';
+                document.getElementById('panelExport').style.display = 'flex';
+                
+                // Show metadata panel for JPEG formats
+                document.getElementById('panelExif').style.display = 'flex';
+
+                // Showcase displays
+                document.getElementById('previewPlaceholder').style.display = 'none';
+                
+                const previewImg = document.getElementById('previewImg');
+                previewImg.src = dataUrl;
+                previewImg.style.display = 'block';
+
+                document.getElementById('statsCard').style.display = 'block';
+                document.getElementById('downloadBtn').style.display = 'flex';
+
+                updateStats();
+            };
+            img.src = dataUrl;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Toggle aspect ratio lock
+    function toggleAspectLock() {
+        isAspectLocked = !isAspectLocked;
+        const btn = document.getElementById('aspectLock');
+        const path = document.getElementById('lockPath');
+        
+        if (isAspectLocked) {
+            btn.classList.add('locked');
+            // Locked icon SVG
+            path.setAttribute('d', 'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z');
+            // If aspect ratio is locked, immediately align height to width aspect ratio
+            const width = parseInt(document.getElementById('imgWidth').value, 10);
+            if (!isNaN(width)) {
+                document.getElementById('imgHeight').value = Math.round(width / originalAspectRatio);
+            }
+        } else {
+            btn.classList.remove('locked');
+            // Unlocked icon SVG
+            path.setAttribute('d', 'M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2zM12 6c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2z');
+        }
+        updateStats();
+    }
+
+    // Dynamic scale ratios slider sync
+    function changeRatio(ratio) {
+        if (!originalImage) return;
+        document.getElementById('percentLabel').textContent = ratio + '%';
+        
+        const newWidth = Math.round(originalImage.width * (ratio / 100));
+        const newHeight = Math.round(originalImage.height * (ratio / 100));
+        
+        document.getElementById('imgWidth').value = newWidth;
+        document.getElementById('imgHeight').value = newHeight;
+        
+        updateStats();
+    }
+
+    // Width input updates
+    function changeWidth(width) {
+        if (!originalImage || !width) return;
+        const wVal = parseInt(width, 10);
+        if (isNaN(wVal) || wVal <= 0) return;
+
+        if (isAspectLocked) {
+            document.getElementById('imgHeight').value = Math.round(wVal / originalAspectRatio);
+        }
+        updatePercentLabelFromDimensions();
+        updateStats();
+    }
+
+    // Height input updates
+    function changeHeight(height) {
+        if (!originalImage || !height) return;
+        const hVal = parseInt(height, 10);
+        if (isNaN(hVal) || hVal <= 0) return;
+
+        if (isAspectLocked) {
+            document.getElementById('imgWidth').value = Math.round(hVal * originalAspectRatio);
+        }
+        updatePercentLabelFromDimensions();
+        updateStats();
+    }
+
+    function updatePercentLabelFromDimensions() {
+        const width = parseInt(document.getElementById('imgWidth').value, 10);
+        const ratio = Math.round((width / originalImage.width) * 100);
+        document.getElementById('resizeRatio').value = ratio;
+        document.getElementById('percentLabel').textContent = ratio + '%';
+    }
+
+    // Custom dimensions presets
+    function applyPreset(width, height) {
+        if (!originalImage) return;
+        
+        document.getElementById('imgWidth').value = width;
+        if (isAspectLocked) {
+            document.getElementById('imgHeight').value = Math.round(width / originalAspectRatio);
+        } else {
+            document.getElementById('imgHeight').value = height;
+        }
+        updatePercentLabelFromDimensions();
+        updateStats();
+    }
+
+    // Output Formats toggle updates
+    function changeFormat(format) {
+        const qualityWrapper = document.getElementById('qualityWrapper');
+        
+        // Hide quality slider for lossless PNG
+        if (format === 'image/png') {
+            qualityWrapper.style.display = 'none';
+        } else {
+            qualityWrapper.style.display = 'block';
+        }
+        
+        updateStats();
+    }
+
+    // Dynamic quality text sync
+    function changeQuality(quality) {
+        const label = document.getElementById('qualityLabel');
+        
+        let desc = "Medium";
+        if (quality < 35) desc = "Low (faster, smaller)";
+        else if (quality < 70) desc = "Medium";
+        else if (quality < 90) desc = "High (recommended)";
+        else desc = "Maximum Quality";
+        
+        label.textContent = `${quality}% — ${desc}`;
+        updateStats();
+    }
+
+    // Switch between EXIF modes
+    function switchExifMode(mode) {
+        activeExifMode = mode;
+        
+        document.querySelectorAll('.mode-tab').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('exifTab' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+        
+        // Hide/Show notifications and form fields
+        document.getElementById('exifFormContainer').style.display = (mode === 'custom') ? 'block' : 'none';
+        document.getElementById('exifStrippedNotice').style.display = (mode === 'strip') ? 'block' : 'none';
+        document.getElementById('exifKeepNotice').style.display = (mode === 'keep') ? 'block' : 'none';
+        
+        updateStats();
+    }
+
+    // Populate EXIF fields when loading original JPEG
+    function populateExifForm(exifObj) {
+        if (!exifObj) return;
+
+        // Load camera make/model
+        const make = exifObj['0th'] ? exifObj['0th'][piexif.ImageIFD.Make] : "";
+        const model = exifObj['0th'] ? exifObj['0th'][piexif.ImageIFD.Model] : "";
+        const dateTime = exifObj['0th'] ? exifObj['0th'][piexif.ImageIFD.DateTime] : "";
+
+        document.getElementById('exifMake').value = make || "";
+        document.getElementById('exifModel').value = model || "";
+        document.getElementById('exifDateTime').value = fromExifDate(dateTime);
+
+        // Load GPS coordinates
+        if (exifObj['GPS']) {
+            const lat = exifGPSToDecimal(exifObj['GPS'][piexif.GPSIFD.GPSLatitude], exifObj['GPS'][piexif.GPSIFD.GPSLatitudeRef]);
+            const lng = exifGPSToDecimal(exifObj['GPS'][piexif.GPSIFD.GPSLongitude], exifObj['GPS'][piexif.GPSIFD.GPSLongitudeRef]);
+            
+            if (lat !== null) document.getElementById('exifLat').value = lat.toFixed(5);
+            if (lng !== null) document.getElementById('exifLng').value = lng.toFixed(5);
+            
+            document.getElementById('statExifCount').innerHTML = `✓ Active (Lat: ${lat.toFixed(3)}, Lng: ${lng.toFixed(3)})`;
+            document.getElementById('statExifCount').style.color = "var(--success-color)";
+        } else {
+            clearGPSFields();
+            document.getElementById('statExifCount').textContent = "Camera tags found (No location)";
+            document.getElementById('statExifCount').style.color = "#6c757d";
+        }
+    }
+
+    function clearGPSFields() {
+        document.getElementById('exifLat').value = "";
+        document.getElementById('exifLng').value = "";
+    }
+
+    function fillMockGPS() {
+        // Mock geotag inside Singapore CBD coordinates
+        document.getElementById('exifLat').value = "1.2823";
+        document.getElementById('exifLng').value = "103.8584";
+        updateStats();
+    }
+
+    // Convert decimal location lat/lng to EXIF format
+    function decimalToExifGPS(decimal, latOrLng) {
+        if (isNaN(decimal) || decimal === null || decimal === "") return null;
+        const decVal = parseFloat(decimal);
+        const ref = latOrLng === 'lat' ? (decVal >= 0 ? 'N' : 'S') : (decVal >= 0 ? 'E' : 'W');
+        const absolute = Math.abs(decVal);
+        const degrees = Math.floor(absolute);
+        const minutesNotTruncated = (absolute - degrees) * 60;
+        const minutes = Math.floor(minutesNotTruncated);
+        const seconds = Math.round((minutesNotTruncated - minutes) * 60 * 100);
+        return {
+            ref: ref,
+            values: [[degrees, 1], [minutes, 1], [seconds, 100]]
+        };
+    }
+
+    // Read EXIF rational arrays to decimal floats
+    function exifGPSToDecimal(exifGPS, ref) {
+        if (!exifGPS || !ref) return null;
+        try {
+            const degrees = exifGPS[0][0] / exifGPS[0][1];
+            const minutes = exifGPS[1][0] / exifGPS[1][1];
+            const seconds = exifGPS[2][0] / exifGPS[2][1];
+            let decimal = degrees + (minutes / 60) + (seconds / 3600);
+            if (ref === 'S' || ref === 'W') {
+                decimal = -decimal;
+            }
+            return decimal;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // Date formatting conversions between HTML and EXIF
+    function toExifDate(htmlDateStr) {
+        if (!htmlDateStr) return "";
+        const parts = htmlDateStr.split('T');
+        const datePart = parts[0].replace(/-/g, ':');
+        const timePart = parts[1] ? parts[1] + ":00" : "00:00:00";
+        return `${datePart} ${timePart}`;
+    }
+
+    function fromExifDate(exifDateStr) {
+        if (!exifDateStr) return "";
+        const parts = exifDateStr.split(' ');
+        if (!parts[0]) return "";
+        const datePart = parts[0].replace(/:/g, '-');
+        const timePart = parts[1] ? parts[1].substring(0, 5) : "00:00";
+        return `${datePart}T${timePart}`;
+    }
+
+    // Format human-readable byte formats
+    function formatBytes(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Estimate file details dynamically without downloading
+    function updateStats() {
+        if (!originalImage) return;
+
+        const w = parseInt(document.getElementById('imgWidth').value, 10) || originalImage.width;
+        const h = parseInt(document.getElementById('imgHeight').value, 10) || originalImage.height;
+
+        document.getElementById('statSizeOrig').textContent = `${originalImage.width} x ${originalImage.height}`;
+        document.getElementById('statSizeNew').textContent = `${w} x ${h}`;
+        document.getElementById('statWeightOrig').textContent = formatBytes(originalFileSize);
+
+        // Approximate sizes based on dimension and quality parameters
+        const format = document.getElementById('exportFormat').value;
+        const quality = parseInt(document.getElementById('exportQuality').value, 10) / 100;
+        
+        let multiplier = 0.15; // JPEG quality scaling weights
+        if (format === 'image/png') multiplier = 0.55;
+        else if (format === 'image/webp') multiplier = 0.12 * quality;
+        else multiplier = 0.15 * quality;
+
+        const estimatedBytes = Math.round(w * h * multiplier);
+        document.getElementById('statWeightNew').textContent = formatBytes(estimatedBytes);
+
+        // Compression saving ratio
+        const savingRow = document.getElementById('savingRow');
+        if (estimatedBytes < originalFileSize) {
+            savingRow.style.display = 'flex';
+            const ratio = Math.round(((originalFileSize - estimatedBytes) / originalFileSize) * 100);
+            document.getElementById('statSavingRatio').textContent = `-${ratio}% smaller`;
+        } else {
+            savingRow.style.display = 'none';
+        }
+
+        // Show EXIF status
+        const exifStatus = document.getElementById('statExifCount');
+        if (activeExifMode === 'strip') {
+            exifStatus.textContent = "Stripped (Removed)";
+            exifStatus.style.color = "var(--error-color)";
+        } else if (activeExifMode === 'keep') {
+            if (originalExifObj) {
+                exifStatus.textContent = "Kept (Original preserved)";
+                exifStatus.style.color = "var(--success-color)";
+            } else {
+                exifStatus.textContent = "None in source image";
+                exifStatus.style.color = "#6c757d";
+            }
+        } else {
+            exifStatus.textContent = "Modified (Custom settings)";
+            exifStatus.style.color = "var(--primary-color)";
+        }
+    }
+
+    // Resize draw canvas operations
+    function renderResizedCanvas() {
+        const w = parseInt(document.getElementById('imgWidth').value, 10);
+        const h = parseInt(document.getElementById('imgHeight').value, 10);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(originalImage, 0, 0, w, h);
+        return canvas;
+    }
+
+    // Execute drawing, metadata editing/stripping, and trigger browser download
+    function executeResizeAndDownload() {
+        if (!originalImage) return;
+
+        const format = document.getElementById('exportFormat').value;
+        const quality = parseInt(document.getElementById('exportQuality').value, 10) / 100;
+        const canvas = renderResizedCanvas();
+
+        let baseDataUrl = canvas.toDataURL(format, quality);
+
+        // Only manipulate EXIF if JPEG is selected
+        if (format === 'image/jpeg') {
+            try {
+                if (activeExifMode === 'strip') {
+                    // Remove all headers using piexif
+                    baseDataUrl = piexif.remove(baseDataUrl);
+                } else if (activeExifMode === 'keep' && originalExifObj) {
+                    // Inject original EXIF
+                    const exifBytes = piexif.dump(originalExifObj);
+                    baseDataUrl = piexif.insert(exifBytes, baseDataUrl);
+                } else if (activeExifMode === 'custom') {
+                    // Construct custom EXIF header
+                    const exifObj = {"0th": {}, "Exif": {}, "GPS": {}, "1st": {}};
+                    
+                    const make = document.getElementById('exifMake').value;
+                    const model = document.getElementById('exifModel').value;
+                    const dateTime = document.getElementById('exifDateTime').value;
+
+                    if (make) exifObj["0th"][piexif.ImageIFD.Make] = make;
+                    if (model) exifObj["0th"][piexif.ImageIFD.Model] = model;
+                    if (dateTime) exifObj["0th"][piexif.ImageIFD.DateTime] = toExifDate(dateTime);
+                    exifObj["0th"][piexif.ImageIFD.Software] = "Web App Hub Image Resizer";
+
+                    // Handle GPS coordinates conversion
+                    const lat = document.getElementById('exifLat').value;
+                    const lng = document.getElementById('exifLng').value;
+                    
+                    if (lat && lng) {
+                        const latData = decimalToExifGPS(lat, 'lat');
+                        const lngData = decimalToExifGPS(lng, 'lng');
+                        
+                        if (latData && lngData) {
+                            exifObj["GPS"][piexif.GPSIFD.GPSLatitudeRef] = latData.ref;
+                            exifObj["GPS"][piexif.GPSIFD.GPSLatitude] = latData.values;
+                            exifObj["GPS"][piexif.GPSIFD.GPSLongitudeRef] = lngData.ref;
+                            exifObj["GPS"][piexif.GPSIFD.GPSLongitude] = lngData.values;
+                        }
+                    }
+
+                    const exifBytes = piexif.dump(exifObj);
+                    baseDataUrl = piexif.insert(exifBytes, baseDataUrl);
+                }
+            } catch (exifErr) {
+                console.error("EXIF Write Error: ", exifErr);
+            }
+        }
+
+        // Trigger browser save
+        const extension = format.split('/')[1].replace('jpeg', 'jpg');
+        const baseName = originalFileName.substring(0, originalFileName.lastIndexOf('.')) || 'image';
+        const downloadName = `${baseName}_resized.${extension}`;
+
+        const link = document.createElement('a');
+        link.download = downloadName;
+        link.href = baseDataUrl;
+        link.click();
+    }
+</script>
+
+</body>
+</html>
