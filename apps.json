@@ -34,5 +34,11 @@
     "path": "pdf-splitter/index.html",
     "icon": "✂️",
     "description": "Rearrange, rotate, delete pages, and split PDFs visually"
+  },
+  {
+    "name": "Password Generator",
+    "path": "password-generator/index.html",
+    "icon": "🔑",
+    "description": "Generate cryptographically secure passwords with custom rules"
   }
 ]

@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Password Generator</title>
+    <!-- Link to global styles -->
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        /* Scoped styles for the Premium UI */
+        .card {
+            max-width: 500px;
+            box-sizing: border-box;
+        }
+
+        /* Password Display Container */
+        .password-display-container {
+            display: flex;
+            align-items: center;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 10px 14px;
+            margin: 1.5rem 0 1rem 0;
+            position: relative;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
+            transition: border-color 0.2s;
+        }
+
+        .password-display-container:focus-within {
+            border-color: var(--primary-color);
+        }
+
+        .password-text {
+            flex-grow: 1;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            color: #212529;
+            word-break: break-all;
+            user-select: all;
+            min-height: 2rem;
+            display: flex;
+            align-items: center;
+            padding-right: 10px;
+        }
+
+        .password-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-icon-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6c757d;
+            transition: all 0.2s;
+            width: auto;
+            height: auto;
+        }
+
+        .action-icon-btn:hover {
+            background-color: #e9ecef;
+            color: var(--primary-hover);
+        }
+
+        .action-icon-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+            transition: transform 0.3s ease;
+        }
+
+        .action-icon-btn:active svg {
+            transform: scale(0.9);
+        }
+
+        /* Custom Length Slider & Synced Controls */
+        .length-control {
+            margin: 1.5rem 0;
+        }
+
+        .length-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .length-value-input {
+            width: 60px;
+            padding: 6px;
+            margin: 0;
+            border: 2px solid #ced4da;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 1rem;
+            font-weight: bold;
+            -moz-appearance: textfield;
+            text-transform: none;
+        }
+
+        .length-value-input::-webkit-outer-spin-button,
+        .length-value-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .slider-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slider {
+            flex-grow: 1;
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 5px;
+            background: #e9ecef;
+            outline: none;
+            transition: background 0.3s;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            box-shadow: 0 2px 6px rgba(0,123,255,0.3);
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            background: var(--primary-hover);
+        }
+
+        /* Strength Meter CSS */
+        .strength-container {
+            margin: 1rem 0 1.5rem 0;
+        }
+
+        .strength-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #6c757d;
+            margin-bottom: 6px;
+        }
+
+        .strength-label {
+            font-weight: 700;
+            transition: color 0.3s ease;
+        }
+
+        .strength-bar {
+            height: 6px;
+            background-color: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+            width: 100%;
+            position: relative;
+        }
+
+        .strength-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 3px;
+            transition: width 0.4s ease, background-color 0.4s ease;
+        }
+
+        /* Option Grid */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 1.5rem 0;
+        }
+
+        .option-card {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+        .option-card:hover {
+            background-color: #f1f3f5;
+            border-color: #ced4da;
+        }
+
+        .option-card.checked {
+            background-color: rgba(0, 123, 255, 0.05);
+            border-color: var(--primary-color);
+        }
+
+        .option-card input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .option-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .option-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #212529;
+        }
+
+        .option-desc {
+            font-size: 0.75rem;
+            color: #6c757d;
+        }
+
+        /* Full width option style */
+        .option-card-full {
+            grid-column: span 2;
+        }
+
+        /* Toast Popup Notification */
+        .toast {
+            position: absolute;
+            bottom: 120%;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            background: #333;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s, transform 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+        }
+
+        /* Keyframe animation for refresh button spin */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .spin-animation {
+            animation: spin 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body style="padding-top: 2rem;">
+
+<div class="card">
+    <a href="../index.html" class="back-btn">← Back to Menu</a>
+    <h2 style="margin-top: 10px; margin-bottom: 5px;">Secure Password Generator</h2>
+    <p style="margin-top: 0; color: var(--text-muted); font-size: 0.9rem;">Create strong, cryptographically secure passwords locally on your device.</p>
+    
+    <!-- Password Display Box -->
+    <div class="password-display-container">
+        <span id="passwordText" class="password-text">Generating...</span>
+        <div class="password-actions">
+            <!-- Toast notification container -->
+            <div id="copyToast" class="toast">Copied to Clipboard!</div>
+            
+            <button id="copyBtn" class="action-icon-btn" title="Copy to Clipboard" onclick="copyToClipboard()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                </svg>
+            </button>
+            <button id="regenerateBtn" class="action-icon-btn" title="Generate New Password" onclick="handleRegenerate()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Password Strength Meter -->
+    <div class="strength-container">
+        <div class="strength-header">
+            <span>Strength: <span id="strengthLabel" class="strength-label">Very Weak</span></span>
+            <span id="entropyLabel">0 bits</span>
+        </div>
+        <div class="strength-bar">
+            <div id="strengthFill" class="strength-fill"></div>
+        </div>
+    </div>
+
+    <!-- Length Customizer -->
+    <div class="length-control">
+        <div class="length-header">
+            <span>Password Length</span>
+            <input type="number" id="lengthInput" class="length-value-input" min="6" max="64" value="16" oninput="syncSliderAndInput(this.value, 'slider')">
+        </div>
+        <div class="slider-wrapper">
+            <span>6</span>
+            <input type="range" id="lengthSlider" class="slider" min="6" max="64" value="16" oninput="syncSliderAndInput(this.value, 'input')">
+            <span>64</span>
+        </div>
+    </div>
+
+    <!-- Parameter Options Grid -->
+    <div class="options-grid">
+        <label id="optLower" class="option-card checked" onclick="toggleOptionCard(this)">
+            <input type="checkbox" id="chkLower" checked onchange="updateGenerator()">
+            <div class="option-info">
+                <span class="option-title">Lowercase</span>
+                <span class="option-desc">a-z characters</span>
+            </div>
+        </label>
+        
+        <label id="optUpper" class="option-card checked" onclick="toggleOptionCard(this)">
+            <input type="checkbox" id="chkUpper" checked onchange="updateGenerator()">
+            <div class="option-info">
+                <span class="option-title">Uppercase</span>
+                <span class="option-desc">A-Z characters</span>
+            </div>
+        </label>
+        
+        <label id="optNumbers" class="option-card checked" onclick="toggleOptionCard(this)">
+            <input type="checkbox" id="chkNumbers" checked onchange="updateGenerator()">
+            <div class="option-info">
+                <span class="option-title">Numbers</span>
+                <span class="option-desc">0-9 digits</span>
+            </div>
+        </label>
+        
+        <label id="optSymbols" class="option-card checked" onclick="toggleOptionCard(this)">
+            <input type="checkbox" id="chkSymbols" checked onchange="updateGenerator()">
+            <div class="option-info">
+                <span class="option-title">Symbols</span>
+                <span class="option-desc">!@#$%^&* special</span>
+            </div>
+        </label>
+
+        <label id="optAmbiguous" class="option-card option-card-full" onclick="toggleOptionCard(this)">
+            <input type="checkbox" id="chkAmbiguous" onchange="updateGenerator()">
+            <div class="option-info">
+                <span class="option-title">Exclude Ambiguous Characters</span>
+                <span class="option-desc">Avoid confusing characters like o, O, 0, I, l, 1, s, S, 5</span>
+            </div>
+        </label>
+    </div>
+
+    <!-- Main Button -->
+    <button onclick="handleRegenerate()">Generate Secure Password</button>
+</div>
+
+<script>
+    // Synced length slider and number input
+    function syncSliderAndInput(value, targetType) {
+        let numericVal = parseInt(value, 10);
+        if (isNaN(numericVal)) return;
+        
+        // Boundaries enforcement
+        if (numericVal < 6) numericVal = 6;
+        if (numericVal > 64) numericVal = 64;
+
+        if (targetType === 'slider') {
+            document.getElementById('lengthSlider').value = numericVal;
+        } else {
+            document.getElementById('lengthInput').value = numericVal;
+        }
+        
+        updateGenerator();
+    }
+
+    // Toggle card class on checkbox click
+    function toggleOptionCard(element) {
+        const checkbox = element.querySelector('input[type="checkbox"]');
+        // Prevent infinite loop if clicking checkbox itself
+        if (event.target !== checkbox) {
+            checkbox.checked = !checkbox.checked;
+            updateGenerator();
+        }
+        
+        if (checkbox.checked) {
+            element.classList.add('checked');
+        } else {
+            element.classList.remove('checked');
+        }
+    }
+
+    // Setup initial state of custom cards based on checked status
+    function initOptions() {
+        const checkBoxes = ['chkLower', 'chkUpper', 'chkNumbers', 'chkSymbols', 'chkAmbiguous'];
+        checkBoxes.forEach(id => {
+            const cb = document.getElementById(id);
+            const card = cb.closest('.option-card');
+            if (cb.checked) {
+                card.classList.add('checked');
+            } else {
+                card.classList.remove('checked');
+            }
+        });
+    }
+
+    // Master handler to trigger generation and updates
+    function updateGenerator() {
+        const length = parseInt(document.getElementById('lengthInput').value, 10);
+        
+        const options = {
+            lowercase: document.getElementById('chkLower').checked,
+            uppercase: document.getElementById('chkUpper').checked,
+            numbers: document.getElementById('chkNumbers').checked,
+            symbols: document.getElementById('chkSymbols').checked,
+            excludeAmbiguous: document.getElementById('chkAmbiguous').checked
+        };
+
+        const password = generateSecurePassword(length, options);
+        
+        const textElement = document.getElementById('passwordText');
+        if (password === "") {
+            textElement.textContent = "Select options below";
+            textElement.style.color = "var(--error-color)";
+            updateStrengthMeter(0, 0);
+        } else {
+            textElement.textContent = password;
+            textElement.style.color = "";
+            
+            // Calculate entropy
+            const poolSize = calculatePoolSize(options);
+            const entropy = Math.round(length * Math.log2(poolSize));
+            updateStrengthMeter(entropy, length);
+        }
+    }
+
+    // Core secure password generation using CSPRNG
+    function generateSecurePassword(length, options) {
+        const sets = [];
+        let fullPool = "";
+
+        if (options.lowercase) {
+            let set = "abcdefghijklmnopqrstuvwxyz";
+            if (options.excludeAmbiguous) set = set.replace(/[los]/g, "");
+            if (set.length > 0) {
+                sets.push(set);
+                fullPool += set;
+            }
+        }
+        if (options.uppercase) {
+            let set = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            if (options.excludeAmbiguous) set = set.replace(/[IOS]/g, "");
+            if (set.length > 0) {
+                sets.push(set);
+                fullPool += set;
+            }
+        }
+        if (options.numbers) {
+            let set = "0123456789";
+            if (options.excludeAmbiguous) set = set.replace(/[015]/g, "");
+            if (set.length > 0) {
+                sets.push(set);
+                fullPool += set;
+            }
+        }
+        if (options.symbols) {
+            // Standard safe symbols pool
+            let set = "!@#$%^&*()_+-=[]{}|;:,.<>?";
+            sets.push(set);
+            fullPool += set;
+        }
+
+        if (fullPool.length === 0) {
+            return "";
+        }
+
+        let passwordArr = [];
+        let guaranteedCount = 0;
+
+        // Ensure at least one character from each active group (if length is sufficient)
+        if (length >= sets.length) {
+            sets.forEach(set => {
+                passwordArr.push(getRandomChar(set));
+                guaranteedCount++;
+            });
+        }
+
+        // Fill remaining spaces with random drawings from full pool
+        for (let i = guaranteedCount; i < length; i++) {
+            passwordArr.push(getRandomChar(fullPool));
+        }
+
+        // Cryptographically shuffle array using CSPRNG Fisher-Yates
+        shuffleArray(passwordArr);
+
+        return passwordArr.join("");
+    }
+
+    // Safe drawing of random char using CSPRNG
+    function getRandomChar(str) {
+        const buffer = new Uint32Array(1);
+        window.crypto.getRandomValues(buffer);
+        return str[buffer[0] % str.length];
+    }
+
+    // Cryptographic Fisher-Yates Shuffle
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const buffer = new Uint32Array(1);
+            window.crypto.getRandomValues(buffer);
+            const j = buffer[0] % (i + 1);
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    // Helper to estimate character set pool size for entropy calculation
+    function calculatePoolSize(options) {
+        let size = 0;
+        if (options.lowercase) {
+            size += options.excludeAmbiguous ? 23 : 26; // a-z minus 'l', 'o', 's'
+        }
+        if (options.uppercase) {
+            size += options.excludeAmbiguous ? 23 : 26; // A-Z minus 'I', 'O', 'S'
+        }
+        if (options.numbers) {
+            size += options.excludeAmbiguous ? 7 : 10;   // 0-9 minus '0', '1', '5'
+        }
+        if (options.symbols) {
+            size += 26; // Symbols
+        }
+        return size || 1;
+    }
+
+    // Update the live visual strength meter and entropy label
+    function updateStrengthMeter(entropy, length) {
+        const label = document.getElementById('strengthLabel');
+        const fill = document.getElementById('strengthFill');
+        const entropyText = document.getElementById('entropyLabel');
+
+        entropyText.textContent = `${entropy} bits`;
+
+        let percent = Math.min((entropy / 100) * 100, 100);
+        if (entropy === 0) percent = 0;
+
+        fill.style.width = `${percent}%`;
+
+        // Color and wording ranges
+        // Weak: < 40 bits of entropy
+        // Medium: 40 to 59 bits
+        // Strong: 60 to 79 bits
+        // Very Strong: >= 80 bits
+        if (entropy === 0) {
+            label.textContent = "Empty";
+            label.style.color = "#6c757d";
+            fill.style.backgroundColor = "#e9ecef";
+        } else if (entropy < 40) {
+            label.textContent = "Very Weak";
+            label.style.color = "#dc3545"; // Red
+            fill.style.backgroundColor = "#dc3545";
+        } else if (entropy < 60) {
+            label.textContent = "Weak";
+            label.style.color = "#fd7e14"; // Orange
+            fill.style.backgroundColor = "#fd7e14";
+        } else if (entropy < 80) {
+            label.textContent = "Medium";
+            label.style.color = "#ffc107"; // Yellow
+            fill.style.backgroundColor = "#ffc107";
+        } else if (entropy < 100) {
+            label.textContent = "Strong";
+            label.style.color = "#28a745"; // Light Green
+            fill.style.backgroundColor = "#28a745";
+        } else {
+            label.textContent = "Very Strong";
+            label.style.color = "#20c997"; // Teal
+            fill.style.backgroundColor = "#20c997";
+        }
+    }
+
+    // Handle copying to clipboard with smooth toast notification
+    function copyToClipboard() {
+        const textToCopy = document.getElementById('passwordText').textContent;
+        if (textToCopy === "Select options below" || textToCopy === "Generating...") return;
+
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            const toast = document.getElementById('copyToast');
+            toast.classList.add('show');
+            
+            // Hide after 2 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+        });
+    }
+
+    // Play spinning transition on the regenerate button
+    function handleRegenerate() {
+        const btn = document.getElementById('regenerateBtn').querySelector('svg');
+        btn.classList.remove('spin-animation');
+        // Force reflow to restart animation
+        void btn.offsetWidth;
+        btn.classList.add('spin-animation');
+        
+        updateGenerator();
+    }
+
+    // Run initialization on page load
+    window.onload = function() {
+        initOptions();
+        updateGenerator();
+    };
+</script>
+
+</body>
+</html>
