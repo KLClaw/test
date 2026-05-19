@@ -153,6 +153,7 @@
 
     <div id="result-label">Prediction</div>
     <div id="result">--</div>
+    <div id="pinyin" style="font-size: 24px; color: #28a745; font-weight: 600; margin-top: -5px; margin-bottom: 15px; min-height: 32px;">--</div>
 
     <span class="debug-toggle" onclick="toggleDebug()">⚙️ Show Debug Info</span>
     <div id="debugSection" class="debug-section">
@@ -165,11 +166,13 @@
   <script>
     let recSession;
     let charDict = [];
+    let pinyinDict = {};
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const runBtn = document.getElementById('runBtn');
     const status = document.getElementById('status');
     const resultDiv = document.getElementById('result');
+    const pinyinDiv = document.getElementById('pinyin');
 
     // Canvas Drawing Logic
     let drawing = false;
@@ -217,6 +220,7 @@
     function clearCanvas() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       resultDiv.innerText = "--";
+      pinyinDiv.innerText = "--";
     }
 
     // Load Resources
@@ -226,6 +230,16 @@
         if (!resp.ok) throw new Error("Failed to load dictionary");
         const text = await resp.text();
         charDict = text.split(/\r?\n/).filter(line => line.trim() !== "");
+
+        // Load local pinyin dictionary
+        try {
+          const pinyinResp = await fetch('./pinyin.json');
+          if (pinyinResp.ok) {
+            pinyinDict = await pinyinResp.json();
+          }
+        } catch (pe) {
+          console.warn("Failed to load local pinyin dictionary", pe);
+        }
 
         // Note: Using the provided logic for session creation
         // We'll try to find the model file in the adjacent folder as requested
@@ -238,7 +252,6 @@
         status.innerText = "Ready! Draw a character.";
         runBtn.disabled = false;
       } catch (e) {
-        console.error(mode_error_trace_placeholder); // Placeholder for debugging
         status.innerText = "Load Error: Check console";
         console.error(e);
       }
@@ -316,6 +329,22 @@
         }
 
         resultDiv.innerText = recognizedText || "??";
+        
+        // Lookup Hanyu Pinyin
+        let pinyinText = "";
+        if (recognizedText) {
+          const pinyinList = [];
+          for (const char of recognizedText) {
+            if (pinyinDict && pinyinDict[char]) {
+              pinyinList.push(pinyinDict[char].join('/'));
+            } else {
+              pinyinList.push("?");
+            }
+          }
+          pinyinText = pinyinList.join(' ');
+        }
+        pinyinDiv.innerText = pinyinText || "--";
+
         status.innerText = "Ready";
       } catch (e) {
         console.error(e);
